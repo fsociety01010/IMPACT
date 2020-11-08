@@ -14,20 +14,4 @@ public class Surface : MonoBehaviour
     {
         
     }
-
-    void OnCollisionStay(Collision collision) {
-        Debug.Log("ayo");
-    }
-
-    void OnTriggerStay(Collider other) {
-        Debug.Log("ayo");
-    }
-
-    void OnTriggerEnter(Collider other){
-        Debug.Log("ayo Called");
-    }
-
-    void OnCollisionEnter(Collision other){
-        Debug.Log("ayo Called");
-    }
 }

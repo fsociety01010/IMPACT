@@ -19,30 +19,21 @@ public class Projectile : MonoBehaviour {
 
     }
 
-    void OnCollisionStay(Collision collision) {
-        Debug.Log("called");
-        ContactPoint contact = collision.GetContact(0);
-
-        if (Vector3.Distance(contact.point, transform.position) < 1.0f){
-            LeaveTrail(contact.point, 0.1f, trailMaterial);
-        }
-    }
-
     void OnTriggerStay(Collider other) {
-        Debug.Log("called");
+        Debug.Log("OnTriggerStay");
         Vector3 contact = other.ClosestPoint(transform.position);
 
-        if (Vector3.Distance(contact, transform.position) < 1.0f){
+        if (Vector3.Distance(contact, transform.position) < 0.2f){
             LeaveTrail(contact, 0.1f, trailMaterial);
         }
     }
 
     void OnTriggerEnter(Collider other){
-        Debug.Log("also Called");
-    }
-
-    void OnCollisionEnter(Collision other){
-        Debug.Log("also Called");
+        Debug.Log("OnTriggerEnter");
+        Vector3 contact = other.ClosestPoint(transform.position);
+        
+        LeaveTrail(contact, 0.2f, trailMaterial);
+        
     }
 
     //Ca ça marche
