@@ -33,17 +33,15 @@ public class Surface : MonoBehaviour
                 newMesh.normals = baseMesh.normals.Skip(allPointIdsList[triangleID]).Take(3).ToArray();
                 newMesh.uv = baseMesh.uv.Skip(allPointIdsList[triangleID]).Take(3).ToArray();
 
-                foreach (var item in newMesh.vertices)
-                {
-                    Debug.Log(item);
-                }
-                Debug.Log("stop");
-
                 newMesh.triangles = new int[] { 0, 1, 2, 2, 1, 0}; //front face + back face
 
-                GameObject GO = new GameObject("Triangle " + (triangleID / 3));
+                GameObject GO = new GameObject("Fragment Triangle " + (triangleID / 3));
                 GO.transform.position = transform.position;
-                GO.transform.rotation = transform.rotation;
+                if(triangleID % 2 == 0){
+                    GO.transform.rotation = Quaternion.Inverse(transform.rotation);
+                }else{
+                    GO.transform.rotation = transform.rotation;
+                }
                 GO.AddComponent<MeshRenderer>().material = mr.materials[meshID];
                 GO.AddComponent<MeshFilter>().mesh = newMesh;
                 GO.AddComponent<BoxCollider>();
@@ -54,7 +52,7 @@ public class Surface : MonoBehaviour
         }
 
         mr.enabled = false;
-        Time.timeScale = 0.01f;  //pour ralentir la scène
+        Time.timeScale = 0.2f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         Destroy(gameObject);
