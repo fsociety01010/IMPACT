@@ -28,19 +28,18 @@ public class Surface : MonoBehaviour
             for (int triangleID = 0; triangleID < allPointIdsList.Length; triangleID += 3){
                 
                 Mesh newMesh = new Mesh();
-                Vector3[] newVertices = new Vector3[3];
-                Vector3[] newNormals = new Vector3[3];
-                Vector2[] newUvs = new Vector2[3];
+                
+                newMesh.vertices = baseMesh.vertices.Skip(allPointIdsList[triangleID]).Take(3).Select(ver => Vector3.Scale(ver, transform.localScale)).ToArray();
+                newMesh.normals = baseMesh.normals.Skip(allPointIdsList[triangleID]).Take(3).ToArray();
+                newMesh.uv = baseMesh.uv.Skip(allPointIdsList[triangleID]).Take(3).ToArray();
 
-                Array.Copy(baseMesh.vertices, allPointIdsList[triangleID], newVertices, 0, 3);
-                Array.Copy(baseMesh.normals, allPointIdsList[triangleID], newNormals, 0, 3);
-                Array.Copy(baseMesh.uv, allPointIdsList[triangleID], newUvs, 0, 3);
+                foreach (var item in newMesh.vertices)
+                {
+                    Debug.Log(item);
+                }
+                Debug.Log("stop");
 
-                newMesh.vertices = newVertices;
-                newMesh.normals = newNormals;
-                newMesh.uv = newUvs;
-
-                newMesh.triangles = new int[] { 0, 1, 2, 2, 1, 0 };
+                newMesh.triangles = new int[] { 0, 1, 2, 2, 1, 0}; //front face + back face
 
                 GameObject GO = new GameObject("Triangle " + (triangleID / 3));
                 GO.transform.position = transform.position;
@@ -55,9 +54,9 @@ public class Surface : MonoBehaviour
         }
 
         mr.enabled = false;
-        //Time.timeScale = 0.2f;  //pour ralentir la scène
+        Time.timeScale = 0.01f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
-        //Time.timeScale = 1.0f;
+        Time.timeScale = 1.0f;
         Destroy(gameObject);
 
     }
