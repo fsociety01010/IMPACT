@@ -20,7 +20,6 @@ public class Projectile : MonoBehaviour {
     }
 
     void OnTriggerStay(Collider other) {
-        Debug.Log("OnTriggerStay");
         Vector3 contact = other.ClosestPoint(transform.position);
 
         if (Vector3.Distance(contact, transform.position) < 0.2f){
@@ -29,7 +28,6 @@ public class Projectile : MonoBehaviour {
     }
 
     void OnTriggerEnter(Collider other){
-        Debug.Log("OnTriggerEnter");
         Vector3 contact = other.ClosestPoint(transform.position);
         
         LeaveTrail(contact, 0.2f, trailMaterial);
@@ -39,7 +37,6 @@ public class Projectile : MonoBehaviour {
     //Ca ça marche
     private void LeaveTrail(Vector3 point, float scale, Material material)
     {
-        Debug.Log("HIT");
         GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         sphere.transform.localScale = Vector3.one * scale;
         sphere.transform.position = point;
