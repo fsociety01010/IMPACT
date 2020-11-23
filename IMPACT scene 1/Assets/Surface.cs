@@ -83,14 +83,24 @@ public class Surface : MonoBehaviour
         foreach (var meshID in Enumerable.Range(0,baseMesh.subMeshCount)){            
             //tout le calcul à faire est là en fait
 
-            //calcul primitif, ne marchera qu'avec un cube
+            //calcul primitif, ne marchera qu'avec une surface parfaitement parallèle (sur l'axe X) en terme de nombre de point
             Vector3[] frontVertices = baseMesh.vertices.Where(v => v.x < 0).OrderBy(getAngleFromEpiCenter).Select(ver => Vector3.Scale(ver, transform.localScale)).ToArray();
             Vector3[] backVertices = baseMesh.vertices.Where(v => v.x >= 0).OrderBy(getAngleFromEpiCenter).Select(ver => Vector3.Scale(ver, transform.localScale)).ToArray();
 
-            for (int vIndex = 3; vIndex < frontVertices.Length; vIndex += 3){
+            for (int vIndex = 0; vIndex < frontVertices.Length; vIndex += 3){
+                
                 Mesh newMesh = new Mesh();
 
-                newMesh.vertices = new Vector3[] {frontVertices[vIndex], frontVertices[vIndex-1], epiCenter_, backVertices[vIndex], backVertices[vIndex-1], new Vector3(backVertices[1].x, epiCenter_.y, epiCenter_.z)};              
+                if(vIndex == 0){
+                    newMesh.vertices = new Vector3[] {frontVertices[vIndex+3], frontVertices[vIndex], new Vector3(frontVertices[0].x, epiCenter_.y, epiCenter_.z), backVertices[vIndex+3], backVertices[vIndex], new Vector3(backVertices[0].x, epiCenter_.y, epiCenter_.z)};              
+                }else{
+                    if(vIndex+3 >= frontVertices.Length){
+                        newMesh.vertices = new Vector3[] {frontVertices[vIndex], frontVertices[vIndex-3], new Vector3(frontVertices[0].x, epiCenter_.y, epiCenter_.z), backVertices[vIndex], backVertices[vIndex-3], new Vector3(backVertices[0].x, epiCenter_.y, epiCenter_.z)};
+                    }else{
+                        newMesh.vertices = new Vector3[] {frontVertices[vIndex+3], frontVertices[vIndex-3], new Vector3(frontVertices[0].x, epiCenter_.y, epiCenter_.z), backVertices[vIndex+3], backVertices[vIndex-3], new Vector3(backVertices[0].x, epiCenter_.y, epiCenter_.z)};
+                    }
+                }
+                
                 
                 newMesh.triangles = new int[] { 0,1,2, 2,5,3, 3,0,2, 2,1,5, 5,1,4, 4,1,0, 0,3,4, 4,3,5};
                 
@@ -107,7 +117,7 @@ public class Surface : MonoBehaviour
             }
         }
         mr.enabled = false;
-        //Time.timeScale = 0.02f;  //pour ralentir la scène
+        //Time.timeScale = 0.2f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         Destroy(gameObject);
