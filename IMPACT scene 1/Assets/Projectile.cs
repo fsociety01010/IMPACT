@@ -5,15 +5,16 @@ using UnityEngine;
 public class Projectile : MonoBehaviour {
 
     private Material trailMaterial;
-
-    // Start is called before the first frame update
+    private Rigidbody rigidBody;
+    
     void Start()
     {
-        trailMaterial = new Material(Shader.Find("Specular"));
-        trailMaterial.color = Color.red;
+        this.trailMaterial = new Material(Shader.Find("Specular"));
+        this.trailMaterial.color = Color.red;
+        this.rigidBody = GetComponent<Rigidbody>();
+        this.rigidBody.velocity = new Vector3(20,0,0);
     }
 
-    // Update is called once per frame
     void Update()
     {
 
@@ -23,14 +24,14 @@ public class Projectile : MonoBehaviour {
         Vector3 contact = other.ClosestPoint(transform.position);
 
         if (Vector3.Distance(contact, transform.position) < 0.2f){
-            LeaveTrail(contact, 0.1f, trailMaterial);
+            LeaveTrail(contact, 0.1f, this.trailMaterial);
         }
     }
 
     void OnTriggerEnter(Collider other){
         Vector3 contact = other.ClosestPoint(transform.position);
         
-        LeaveTrail(contact, 0.2f, trailMaterial);
+        LeaveTrail(contact, 0.2f, this.trailMaterial);
         
     }
 
