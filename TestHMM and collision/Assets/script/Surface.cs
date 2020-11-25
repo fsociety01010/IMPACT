@@ -56,11 +56,11 @@ public class Surface : MonoBehaviour
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         Destroy(gameObject);
-
+        counter--;
     }
 
 
-    void OnTriggerEnter(Collider other){
+    /*void OnTriggerEnter(Collider other){
         if(counter == 0){
             Vector3 impactPoint = other.gameObject.GetComponent<Collider>().ClosestPointOnBounds(transform.position);
             Debug.Log(impactPoint);
@@ -68,5 +68,15 @@ public class Surface : MonoBehaviour
             counter++;
         }
         
+    }*/
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (counter == 0)
+        {
+            Vector3 impactPoint = collision.GetContact(0).point;
+            Debug.Log(impactPoint);
+            StartCoroutine(BreakSurface());
+            counter++;
+        }
     }
 }
