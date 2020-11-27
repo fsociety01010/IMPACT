@@ -23,15 +23,15 @@ public class Projectile : MonoBehaviour {
     void OnTriggerStay(Collider other) {
         Vector3 contact = other.ClosestPoint(transform.position);
 
-        if (Vector3.Distance(contact, transform.position) < 0.2f){
+        /*if (Vector3.Distance(contact, transform.position) < 0.2f){
             LeaveTrail(contact, 0.1f, this.trailMaterial);
-        }
+        }*/
     }
 
     void OnTriggerEnter(Collider other){
         Vector3 contact = other.ClosestPoint(transform.position);
         
-        LeaveTrail(contact, 0.2f, this.trailMaterial);
+        //LeaveTrail(contact, 0.2f, this.trailMaterial);
         
     }
 
