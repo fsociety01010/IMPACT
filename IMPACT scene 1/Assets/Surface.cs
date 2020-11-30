@@ -25,19 +25,29 @@ public class Surface : MonoBehaviour
         
     }
 
-    private float distance(Vector3 reference_,Vector3[] vertices_){
-        //concept: calculer la diff d'aire entre le triangle de base et l'addition de trois sous triangle entre les points de base du triangle et le point reference_
-        //calcul d'aire mathématiquement faux mais plus rapide que le vrai
-        float[] abc = new float[]{(vertices_[0] - vertices_[1]).sqrMagnitude, (vertices_[0] - vertices_[2]).sqrMagnitude, (vertices_[1] - vertices_[2]).sqrMagnitude};
-        float s = abc.Sum();
-        float referenceArea = s*abc.Aggregate(0.0f, (total, val) => total * (s - val));
-
-        float comparisonArea = 0.0f;
-        for(int i=0; i<3;i++){
-            s = abc[i] + (vertices_[i] - reference_).sqrMagnitude + (vertices_[(i+1)%3] - reference_).sqrMagnitude;
-            comparisonArea += s*(s-abc[i])*(s-(reference_ - vertices_[i]).sqrMagnitude)*(s-(reference_ - vertices_[(i+1)%3]).sqrMagnitude);
+    private float distance(Vector3 reference_, Vector3[] vertices_){
+        float getArea(float[] abc_){
+            float s = abc_.Sum() /2;
+            return Mathf.Sqrt(s * abc_.Aggregate(0f, (acc,val) => acc + s-val));
         }
-        return comparisonArea - referenceArea;
+        float[] abc = new float[]{
+            (vertices_[0] - vertices_[1]).magnitude,
+            (vertices_[1] - vertices_[2]).magnitude,
+            (vertices_[2] - vertices_[0]).magnitude
+        };
+        float baseArea = getArea(abc);
+
+        float distanceArea = Enumerable.Range(0,3).Sum(index => getArea(
+            new float[]{
+                abc[index], 
+                (vertices_[index] - reference_).magnitude, 
+                (vertices_[(index+1)%3] - reference_).magnitude
+            }
+        ));
+
+        Debug.Log(Mathf.Abs(distanceArea - baseArea));
+        return Mathf.Abs(distanceArea - baseArea);
+
     }
 
     private Vector3 transfomToNewSpace(Vector3 vertex_, Matrix4x4 newSpace_){
@@ -53,21 +63,12 @@ public class Surface : MonoBehaviour
         Matrix4x4 worldToLocal = this.transform.worldToLocalMatrix;
         Vector3 epicenterInLocal = worldToLocal.MultiplyPoint3x4(projectilePosition_);
 
-        int closestTriangle = 0;
-        Vector3[] closestVertices = new Vector3[3] {mesh_.vertices[0], mesh_.vertices[1],mesh_.vertices[2]};
-        float closestDistance = this.distance(epicenterInLocal, closestVertices);
-        float currentDistance;
+        int closestTriangle = mesh_.triangles
+            .Where((_,i) => i%3==0)
+            .OrderBy(pointer => this.distance(epicenterInLocal, mesh_.vertices.Skip(pointer).Take(3).ToArray()))
+            .First();
 
-        for (int vIndex = 3; vIndex < mesh_.vertices.Length; vIndex += 3){
-            currentDistance = this.distance(epicenterInLocal, mesh_.vertices.Skip(vIndex).Take(3).Select(ver => ver).ToArray());
-            if(currentDistance < closestDistance){
-                closestDistance = currentDistance;
-                closestTriangle = vIndex;
-            }
-        }
-        Array.Copy(mesh_.vertices, closestTriangle, closestVertices, 0,3);
-
-        closestVertices = closestVertices.Select(ver => localToWorld.MultiplyPoint3x4(ver)).ToArray();
+        Vector3[] closestVertices = mesh_.vertices.Skip(closestTriangle).Take(3).Select(ver => localToWorld.MultiplyPoint3x4(ver)).ToArray();
 
         LeaveTrail(closestVertices[0], 0.5f, this.trailMaterial);
         LeaveTrail(closestVertices[1], 0.5f, this.trailMaterial);
@@ -108,17 +109,13 @@ public class Surface : MonoBehaviour
         }
 
         Vector3 localisedEpicenter = Vector3.Scale(worldToLocal.MultiplyPoint3x4(epiCenter_), this.transform.localScale);
-        LeaveTrail(epiCenter_+transform.position, 0.1f, this.trailMaterial);
+        LeaveTrail(epiCenter_, 0.1f, this.trailMaterial);
 
         foreach (var meshID in Enumerable.Range(0,baseMesh.subMeshCount)){            
             //tout le calcul à faire est là en fait
 
             //calcul primitif, ne marchera qu'avec une surface parfaitement parallèle en terme de nombre de point
             IEnumerable<Vector3> objectVertices = baseMesh.vertices.OrderBy(getAngleFromEpiCenter);
-            foreach (var item in objectVertices)
-            {
-                Debug.Log(item.x);
-            }
             Vector3[] frontVertices = objectVertices.Where(v => v.x < 0).Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
             Vector3[] backVertices = objectVertices.Where(v => v.x >= 0).Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
 
@@ -185,10 +182,10 @@ public class Surface : MonoBehaviour
             origin,
             origin + z, Color.blue, 5f
         );
-        Debug.Log(x);
-        Debug.Log(y);
-        Debug.Log(z);
-        Debug.Log(origin);
+        //Debug.Log(x);
+        //Debug.Log(y);
+        //Debug.Log(z);
+        //Debug.Log(origin);
     }
 
     private void LeaveTrail(Vector3 point, float scale, Material material)
