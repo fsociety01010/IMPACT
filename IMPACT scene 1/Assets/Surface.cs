@@ -26,7 +26,18 @@ public class Surface : MonoBehaviour
     }
 
     private float distance(Vector3 reference_,Vector3[] vertices_){
-        return vertices_.Select(v => Vector3.Distance(reference_, v)).Sum();
+        //concept: calculer la diff d'aire entre le triangle de base et l'addition de trois sous triangle entre les points de base du triangle et le point reference_
+        //calcul d'aire mathématiquement faux mais plus rapide que le vrai
+        float[] abc = new float[]{(vertices_[0] - vertices_[1]).sqrMagnitude, (vertices_[0] - vertices_[2]).sqrMagnitude, (vertices_[1] - vertices_[2]).sqrMagnitude};
+        float s = abc.Sum();
+        float referenceArea = s*abc.Aggregate(0.0f, (total, val) => total * (s - val));
+
+        float comparisonArea = 0.0f;
+        for(int i=0; i<3;i++){
+            s = abc[i] + (vertices_[i] - reference_).sqrMagnitude + (vertices_[(i+1)%3] - reference_).sqrMagnitude;
+            comparisonArea += s*(s-abc[i])*(s-(reference_ - vertices_[i]).sqrMagnitude)*(s-(reference_ - vertices_[(i+1)%3]).sqrMagnitude);
+        }
+        return comparisonArea - referenceArea;
     }
 
     private Vector3 transfomToNewSpace(Vector3 vertex_, Matrix4x4 newSpace_){
@@ -40,13 +51,13 @@ public class Surface : MonoBehaviour
     private Matrix4x4 getLocalImpactSpace(Mesh mesh_, Vector3 projectilePosition_){
         Matrix4x4 localToWorld = this.transform.localToWorldMatrix;
         Matrix4x4 worldToLocal = this.transform.worldToLocalMatrix;
-
         Vector3 epicenterInLocal = worldToLocal.MultiplyPoint3x4(projectilePosition_);
 
         int closestTriangle = 0;
         Vector3[] closestVertices = new Vector3[3] {mesh_.vertices[0], mesh_.vertices[1],mesh_.vertices[2]};
         float closestDistance = this.distance(epicenterInLocal, closestVertices);
         float currentDistance;
+
         for (int vIndex = 3; vIndex < mesh_.vertices.Length; vIndex += 3){
             currentDistance = this.distance(epicenterInLocal, mesh_.vertices.Skip(vIndex).Take(3).Select(ver => ver).ToArray());
             if(currentDistance < closestDistance){
@@ -87,7 +98,7 @@ public class Surface : MonoBehaviour
 
         Matrix4x4 localImpactSpace = this.getLocalImpactSpace(baseMesh, epiCenter_);
         Matrix4x4 worldToLocal = this.transform.worldToLocalMatrix;
-        LeaveTrail(epiCenter_, 0.1f, this.trailMaterial);
+        
         this.debugMatrix(localImpactSpace);
 
         float getAngleFromEpiCenter(Vector3 vertex){
@@ -97,6 +108,7 @@ public class Surface : MonoBehaviour
         }
 
         Vector3 localisedEpicenter = Vector3.Scale(worldToLocal.MultiplyPoint3x4(epiCenter_), this.transform.localScale);
+        LeaveTrail(epiCenter_+transform.position, 0.1f, this.trailMaterial);
 
         foreach (var meshID in Enumerable.Range(0,baseMesh.subMeshCount)){            
             //tout le calcul à faire est là en fait
@@ -140,7 +152,7 @@ public class Surface : MonoBehaviour
             }
         }
         mr.enabled = false;
-        Time.timeScale = 0.2f;  //pour ralentir la scène
+        Time.timeScale = 0.05f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         Destroy(gameObject);
