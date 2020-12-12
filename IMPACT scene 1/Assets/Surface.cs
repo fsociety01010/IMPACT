@@ -112,9 +112,6 @@ public class Surface : MonoBehaviour
         LeaveTrail(epiCenter_, 0.1f, this.trailMaterial);
 
         foreach (var meshID in Enumerable.Range(0,baseMesh.subMeshCount)){            
-            //tout le calcul à faire est là en fait
-
-            //calcul primitif, ne marchera qu'avec une surface parfaitement parallèle en terme de nombre de point
             IEnumerable<Vector3> objectVertices = baseMesh.vertices.OrderBy(getAngleFromEpiCenter);
             Vector3[] frontVertices = objectVertices.Where(v => v.x < 0).Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
             Vector3[] backVertices = objectVertices.Where(v => v.x >= 0).Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
@@ -149,20 +146,19 @@ public class Surface : MonoBehaviour
             }
         }
         mr.enabled = false;
-        Time.timeScale = 0.05f;  //pour ralentir la scène
+        //Time.timeScale = 0.01f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         Destroy(gameObject);
     }
 
-    void OnTriggerEnter(Collider other){
+    void OnCollisionEnter(Collision col){
         if(counter == 0 ){
             counter++;
-            Vector3 impactPoint = other.gameObject.GetComponent<Collider>().ClosestPointOnBounds(transform.position);
+            Vector3 impactPoint = col.GetContact(0).point;
             //Debug.Log(impactPoint);
             StartCoroutine(this.BreakSurfaceV2(impactPoint));
         }
-        
     }
 
     private void debugMatrix(Matrix4x4 matrix_){

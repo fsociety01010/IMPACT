@@ -12,7 +12,7 @@ public class Projectile : MonoBehaviour {
         this.trailMaterial = new Material(Shader.Find("Specular"));
         this.trailMaterial.color = Color.red;
         this.rigidBody = GetComponent<Rigidbody>();
-        this.rigidBody.velocity = new Vector3(20,0,0);
+        this.rigidBody.velocity = new Vector3(15,0,0);
     }
 
     void Update()
