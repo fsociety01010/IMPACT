@@ -28,24 +28,23 @@ public class Surface : MonoBehaviour
     private float distance(Vector3 reference_, Vector3[] vertices_){
         float getArea(float[] abc_){
             float s = abc_.Sum() /2;
-            return Mathf.Sqrt(s * abc_.Aggregate(0f, (acc,val) => acc + s-val));
+            return s * abc_.Aggregate(0f, (acc,val) => acc + s-val);
         }
         float[] abc = new float[]{
-            (vertices_[0] - vertices_[1]).magnitude,
-            (vertices_[1] - vertices_[2]).magnitude,
-            (vertices_[2] - vertices_[0]).magnitude
+            (vertices_[0] - vertices_[1]).sqrMagnitude,
+            (vertices_[1] - vertices_[2]).sqrMagnitude,
+            (vertices_[2] - vertices_[0]).sqrMagnitude
         };
         float baseArea = getArea(abc);
 
         float distanceArea = Enumerable.Range(0,3).Sum(index => getArea(
             new float[]{
                 abc[index], 
-                (vertices_[index] - reference_).magnitude, 
-                (vertices_[(index+1)%3] - reference_).magnitude
+                (vertices_[index] - reference_).sqrMagnitude , 
+                (vertices_[(index+1)%3] - reference_).sqrMagnitude
             }
         ));
 
-        Debug.Log(Mathf.Abs(distanceArea - baseArea));
         return Mathf.Abs(distanceArea - baseArea);
 
     }
