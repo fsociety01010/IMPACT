@@ -8,7 +8,7 @@ using System.IO;
 using System;
 using System.Linq;
 
-public class HMM : MonoBehaviour
+public class KNN : MonoBehaviour
 {
     // Start is called before the first frame update
 
@@ -87,22 +87,26 @@ public class HMM : MonoBehaviour
         //Récupère les deux mains
         Frame frame = controller.Frame();
         List<Hand> hands = frame.Hands;
-        if (hands.Count != 0 && isTracking)
+        if (hands.Count != 0 && isTracking && data.Count != 0)
         {
 
             //Pour les deux mains
             foreach (Hand hand in hands)
             {
 
-                //Calcule la distance de a paume avec le bout des doigts
-                List<float> distances = new List<float>();
+                //Calcule la distance de la paume avec le bout des doigts
+                List<float> handData = new List<float>();
                 Vector palm = hand.PalmPosition;
                 foreach (Finger finger in hand.Fingers)
                 {
                     Vector posFinger = finger.TipPosition;
                     float dist = posFinger.DistanceTo(palm);
-                    distances.Add(dist);
+                    handData.Add(dist);
                 }
+                handData.Add(hand.Rotation.x);
+                handData.Add(hand.Rotation.y);
+                handData.Add(hand.Rotation.z);
+                handData.Add(hand.Rotation.w);
                 //Calcule du KNN
 
                 //Mauvaise clasif rn
@@ -112,7 +116,7 @@ public class HMM : MonoBehaviour
                     float d = 0;
                     for(int i = 0; i < tuple.Item2.Length; i++)
                     {
-                        d += Mathf.Pow(tuple.Item2[i] - distances[i],2);
+                        d += Mathf.Pow(tuple.Item2[i] - handData[i],2);
                     }
                     dists.Add(new Tuple<string, float>(tuple.Item1, Mathf.Sqrt(d)));
                 }
