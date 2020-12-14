@@ -14,6 +14,12 @@ public class Surface : MonoBehaviour
     public float elasticLimit;
     private Material trailMaterial;
 
+    /*
+    Code Oleksandr*/
+    public float explosionForce = 100f;
+    public float explosionRadius = 11f;
+    public float explosionUpward = 1f;
+
     void Start()
     {
         this.trailMaterial = new Material(Shader.Find("Specular"));
@@ -65,6 +71,17 @@ public class Surface : MonoBehaviour
     }
 
     /// <summary>
+    /// Permet de traduire les coordonnées d'un point en WORLD COORDINATES en coordonnées correspondant au repère newSpace_ (qui dans la majorité des cas devrait être orthogonal et normal)
+    /// </summary>
+    private Vector3 spaceToWorld(Vector3 vertex_, Matrix4x4 space_){
+        Vector3 fromOrigin = vertex_ + (Vector3)space_.GetColumn(3);
+        Vector3 newX = Vector3.Scale(-(Vector3)space_.GetColumn(0), fromOrigin);
+        Vector3 newY = Vector3.Scale(-(Vector3)space_.GetColumn(1), fromOrigin);
+        Vector3 newZ = Vector3.Scale(-(Vector3)space_.GetColumn(2), fromOrigin);
+        return newX + newY + newZ;
+    }
+
+    /// <summary>
     /// Permet d'obtenir un repère orthogonal et normal ayant pour origine le point "projectilePosition_".
     /// Le X de ce repère correspondant à la normale de surface du triangle sur lequel l'impact a été détecté.
     /// A utiliser avec transfomToNewSpace.
@@ -100,10 +117,15 @@ public class Surface : MonoBehaviour
         );
     }
 
+    private void explode(Vector3 epicenter_, Rigidbody targetForExplosion_){
+        targetForExplosion_.AddExplosionForce(explosionForce, epicenter_, explosionRadius, explosionUpward, ForceMode.Impulse);
+    }
+
     /// <summary>
     /// Subdivise la mesh de base plusieurs nouvelles mesh, les mesh vont des vertex existant vers le vertex correspondant au point d'impacte (+ le même point mais du côté opposé de la surface)
     /// </summary>
-    private void BreakSurface(Vector3 localisedEpicenter_, Vector3[] impactSideVertices_, Vector3[] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_){
+    private void BreakSurface(Vector3 localisedEpicenter_, Vector3 worldSpaceEpiCenter_, Vector3[] impactSideVertices_, Vector3[] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_){
+        List<GameObject> fragments = new List<GameObject>();
         for (int vIndex = 0; vIndex < impactSideVertices_.Length; vIndex += 3){
             
             Mesh newMesh = new Mesh();
@@ -120,17 +142,23 @@ public class Surface : MonoBehaviour
             
             newMesh.triangles = new int[] { 0,1,2, 2,5,3, 3,0,2, 2,1,5, 5,1,4, 4,1,0, 0,3,4, 4,3,5};
 
+            
             GameObject GO = new GameObject("Fragment Triangle " + (vIndex / 3));
             GO.transform.position = this.transform.position;
             GO.transform.rotation = this.transform.rotation;
             GO.AddComponent<MeshRenderer>().material = mr_.materials[currentMeshID_];
             GO.AddComponent<MeshFilter>().mesh = newMesh;
             GO.AddComponent<BoxCollider>();
-            GO.AddComponent<Rigidbody>().AddExplosionForce(100, this.transform.position, 30);
+            GO.AddComponent<Rigidbody>();
 
-            //Destroy(GO, 5 + UnityEngine.Random.Range(0.0f, 5.0f));
+            fragments.Add(GO);
+
         }
         Destroy(gameObject);
+        
+        foreach (var go in fragments){
+            explode(worldSpaceEpiCenter_, go.GetComponent<Rigidbody>());
+        }
     }
 
     /// <summary>
@@ -161,7 +189,7 @@ public class Surface : MonoBehaviour
             
             //TODO créations de points à la périphérie du points d'impacte
             //TODO appliquer déformation sur ces points
-            BreakSurface(localisedEpicenter, impactSideVertices, oppositeSideVertices, meshID, mr);
+            BreakSurface(localisedEpicenter, epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
         }
 
         //mr.enabled = false;
