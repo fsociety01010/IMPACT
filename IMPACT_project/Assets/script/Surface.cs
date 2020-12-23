@@ -60,28 +60,6 @@ public class Surface : MonoBehaviour
     }
 
     /// <summary>
-    /// Permet de traduire les coordonnées d'un point en WORLD COORDINATES en coordonnées correspondant au repère newSpace_ (qui dans la majorité des cas devrait être orthogonal et normal)
-    /// </summary>
-    private Vector3 transfomToNewSpace(Vector3 vertex_, Matrix4x4 newSpace_){
-        Vector3 fromOrigin = vertex_ - (Vector3)newSpace_.GetColumn(3);
-        Vector3 newX = Vector3.Scale((Vector3)newSpace_.GetColumn(0), fromOrigin);
-        Vector3 newY = Vector3.Scale((Vector3)newSpace_.GetColumn(1), fromOrigin);
-        Vector3 newZ = Vector3.Scale((Vector3)newSpace_.GetColumn(2), fromOrigin);
-        return newX + newY + newZ;
-    }
-
-    /// <summary>
-    /// Permet de traduire les coordonnées d'un point en WORLD COORDINATES en coordonnées correspondant au repère newSpace_ (qui dans la majorité des cas devrait être orthogonal et normal)
-    /// </summary>
-    private Vector3 spaceToWorld(Vector3 vertex_, Matrix4x4 space_){
-        Vector3 fromOrigin = vertex_ + (Vector3)space_.GetColumn(3);
-        Vector3 newX = Vector3.Scale(-(Vector3)space_.GetColumn(0), fromOrigin);
-        Vector3 newY = Vector3.Scale(-(Vector3)space_.GetColumn(1), fromOrigin);
-        Vector3 newZ = Vector3.Scale(-(Vector3)space_.GetColumn(2), fromOrigin);
-        return newX + newY + newZ;
-    }
-
-    /// <summary>
     /// Permet d'obtenir un repère orthogonal et normal ayant pour origine le point "projectilePosition_".
     /// Le X de ce repère correspondant à la normale de surface du triangle sur lequel l'impact a été détecté.
     /// A utiliser avec transfomToNewSpace.
@@ -98,10 +76,6 @@ public class Surface : MonoBehaviour
 
         Vector3[] closestVertices = mesh_.vertices.Skip(closestTriangle).Take(3).Select(ver => localToWorld.MultiplyPoint3x4(ver)).ToArray();
 
-        LeaveTrail(closestVertices[0], 0.5f, this.trailMaterial);
-        LeaveTrail(closestVertices[1], 0.5f, this.trailMaterial);
-        LeaveTrail(closestVertices[2], 0.5f, this.trailMaterial);
-
         //ptit trix mathématique tsais
         Vector3 y = Vector3.Normalize(closestVertices[0] - closestVertices[1]);
         Vector3 z = Vector3.Normalize(closestVertices[0] - closestVertices[2]);
@@ -110,9 +84,9 @@ public class Surface : MonoBehaviour
         Vector3 origin = projectilePosition_;
         
         return new Matrix4x4(
-            new Vector4(x.x, x.y, x.z, 0),
-            new Vector4(y.x, y.y, y.z, 0),
-            new Vector4(z.x, z.y, z.z, 0),
+            new Vector4(x.x, y.x, z.x, 0),
+            new Vector4(x.y, y.y, z.y, 0),
+            new Vector4(x.z, y.z, z.z, 0),
             new Vector4(origin.x, origin.y, origin.z, 1)
         );
     }
@@ -124,26 +98,50 @@ public class Surface : MonoBehaviour
     /// <summary>
     /// Subdivise la mesh de base plusieurs nouvelles mesh, les mesh vont des vertex existant vers le vertex correspondant au point d'impacte (+ le même point mais du côté opposé de la surface)
     /// </summary>
-    private void BreakSurface(Vector3 localisedEpicenter_, Vector3 worldSpaceEpiCenter_, Vector3[] impactSideVertices_, Vector3[] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_){
+    private void BreakSurface(Vector3 worldSpaceEpiCenter_, Vector3[] impactSideVertices_, Vector3[] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_){
         List<GameObject> fragments = new List<GameObject>();
-        for (int vIndex = 0; vIndex < impactSideVertices_.Length; vIndex += 3){
+        Vector3[] impactSideVertices =  impactSideVertices_.Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
+        Vector3[] oppositeSideVertices =  oppositeSideVertices_.Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
+
+        Vector3 impactDirectionThickness = oppositeSideVertices[0] - impactSideVertices[0];
+        Vector3 localisedEpicenter = Vector3.Scale(this.transform.worldToLocalMatrix.MultiplyPoint3x4(worldSpaceEpiCenter_),  this.transform.localScale);
+
+        Vector3 impactSideEpicenter;
+        Vector3 oppositeSideEpicenter;
+
+        print(impactDirectionThickness);
+
+        if(Mathf.Abs(impactDirectionThickness.x) > 0){
+            impactSideEpicenter = new Vector3(impactSideVertices[0].x, localisedEpicenter.y, localisedEpicenter.z);
+            oppositeSideEpicenter = new Vector3(oppositeSideVertices[0].x, localisedEpicenter.y, localisedEpicenter.z);
+        }else if(Mathf.Abs(impactDirectionThickness.y) > 0){
+            impactSideEpicenter = new Vector3(localisedEpicenter.x, impactSideVertices[0].y, localisedEpicenter.z);
+            oppositeSideEpicenter = new Vector3(localisedEpicenter.x, oppositeSideVertices[0].y, localisedEpicenter.z);
+        }else{
+            impactSideEpicenter = new Vector3(localisedEpicenter.x, localisedEpicenter.y, impactSideVertices[0].z);
+            oppositeSideEpicenter = new Vector3(localisedEpicenter.x, localisedEpicenter.y, oppositeSideVertices[0].z);
+        }
+        //ATTENTION, le cas ou un cube à une épaisseur nul n'est pas supporté
+
+        for (int vIndex = 0; vIndex < impactSideVertices_.Length; vIndex ++){
             
             Mesh newMesh = new Mesh();
 
-            if(vIndex == 0){
-                newMesh.vertices = new Vector3[] {impactSideVertices_[vIndex+3], impactSideVertices_[vIndex], new Vector3(impactSideVertices_[0].x, localisedEpicenter_.y, localisedEpicenter_.z), oppositeSideVertices_[vIndex+3], oppositeSideVertices_[vIndex], new Vector3(oppositeSideVertices_[0].x, localisedEpicenter_.y, localisedEpicenter_.z)};              
+            if(vIndex+1 < impactSideVertices.Length){
+                newMesh.vertices = new Vector3[] {
+                    impactSideVertices[vIndex+1], impactSideVertices[vIndex], impactSideEpicenter,
+                    oppositeSideVertices[vIndex+1], oppositeSideVertices[vIndex], oppositeSideEpicenter
+                };              
             }else{
-                if(vIndex+3 >= impactSideVertices_.Length){
-                    newMesh.vertices = new Vector3[] {impactSideVertices_[vIndex], impactSideVertices_[vIndex-3], new Vector3(impactSideVertices_[0].x, localisedEpicenter_.y, localisedEpicenter_.z), oppositeSideVertices_[vIndex], oppositeSideVertices_[vIndex-3], new Vector3(oppositeSideVertices_[0].x, localisedEpicenter_.y, localisedEpicenter_.z)};
-                }else{
-                    newMesh.vertices = new Vector3[] {impactSideVertices_[vIndex+3], impactSideVertices_[vIndex-3], new Vector3(impactSideVertices_[0].x, localisedEpicenter_.y, localisedEpicenter_.z), oppositeSideVertices_[vIndex+3], oppositeSideVertices_[vIndex-3], new Vector3(oppositeSideVertices_[0].x, localisedEpicenter_.y, localisedEpicenter_.z)};
-                }
+                newMesh.vertices = new Vector3[] {
+                    impactSideVertices[vIndex], impactSideVertices[0], impactSideEpicenter,
+                    oppositeSideVertices[vIndex], oppositeSideVertices[0], oppositeSideEpicenter
+                };
             }
             
             newMesh.triangles = new int[] { 0,1,2, 2,5,3, 3,0,2, 2,1,5, 5,1,4, 4,1,0, 0,3,4, 4,3,5};
-
             
-            GameObject GO = new GameObject("Fragment Triangle " + (vIndex / 3));
+            GameObject GO = new GameObject("Fragment Triangle " + vIndex);
             GO.transform.position = this.transform.position;
             GO.transform.rotation = this.transform.rotation;
             GO.AddComponent<MeshRenderer>().material = mr_.materials[currentMeshID_];
@@ -157,7 +155,7 @@ public class Surface : MonoBehaviour
         Destroy(gameObject);
         
         foreach (var go in fragments){
-            explode(worldSpaceEpiCenter_, go.GetComponent<Rigidbody>());
+            this.explode(worldSpaceEpiCenter_, go.GetComponent<Rigidbody>());
         }
     }
 
@@ -171,29 +169,40 @@ public class Surface : MonoBehaviour
 
         Matrix4x4 localImpactSpace = this.getLocalImpactSpace(baseMesh, epiCenter_);
         Matrix4x4 worldToLocal = this.transform.worldToLocalMatrix;
-        this.debugMatrix(localImpactSpace);
+        Matrix4x4 localToWorld = this.transform.localToWorldMatrix;
 
         float getAngleFromEpiCenter(Vector3 vertex){
-            Vector3 translatedVertex = transfomToNewSpace(vertex, localImpactSpace);
-            Vector3 translatedEpicenter = transfomToNewSpace(epiCenter_, localImpactSpace);
-            return 180f * Mathf.Atan2(translatedVertex.z-translatedEpicenter.z, translatedVertex.y-translatedEpicenter.y) / Mathf.PI;
+            Vector3 translatedVertex = localImpactSpace.MultiplyPoint3x4(localToWorld.MultiplyPoint3x4(vertex));
+            return 180f * Mathf.Atan2(translatedVertex.z, translatedVertex.y) / Mathf.PI;
         }
 
-        Vector3 localisedEpicenter = Vector3.Scale(worldToLocal.MultiplyPoint3x4(epiCenter_), this.transform.localScale);
         LeaveTrail(epiCenter_, 0.1f, this.trailMaterial);
 
         foreach (var meshID in Enumerable.Range(0,baseMesh.subMeshCount)){
-            IEnumerable<Vector3> objectVertices = baseMesh.vertices.OrderBy(getAngleFromEpiCenter);
-            Vector3[] impactSideVertices = objectVertices.Where(v => v.x < 0).Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
-            Vector3[] oppositeSideVertices = objectVertices.Where(v => v.x >= 0).Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
+
+            Vector3[] objectVertices = baseMesh.vertices
+                .OrderBy(v => localImpactSpace.MultiplyPoint3x4(localToWorld.MultiplyPoint3x4(v)).x)
+                .ToArray();
             
+            Vector3[] impactSideVertices = objectVertices
+                .Take(objectVertices.Length /2)
+                .OrderBy(getAngleFromEpiCenter)
+                .Where((_,i) => i%3==0)
+                .ToArray(); //pas scale et pas en world coordinates attention
+
+            Vector3[] oppositeSideVertices = objectVertices
+                .Skip(objectVertices.Length /2)
+                .OrderBy(getAngleFromEpiCenter)
+                .Where((_,i) => i%3==0)
+                .ToArray(); //pas scale et pas en world coordinates attention
+
             //TODO créations de points à la périphérie du points d'impacte
             //TODO appliquer déformation sur ces points
-            BreakSurface(localisedEpicenter, epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
+            BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
         }
 
         //mr.enabled = false;
-        //Time.timeScale = 0.01f;  //pour ralentir la scène
+        Time.timeScale = 0.01f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         
