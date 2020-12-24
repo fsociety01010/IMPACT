@@ -62,32 +62,51 @@ public class Surface : MonoBehaviour
     /// <summary>
     /// Permet d'obtenir un repère orthogonal et normal ayant pour origine le point "projectilePosition_".
     /// Le X de ce repère correspondant à la normale de surface du triangle sur lequel l'impact a été détecté.
-    /// A utiliser avec transfomToNewSpace.
     /// </summary>
     private Matrix4x4 getLocalImpactSpace(Mesh mesh_, Vector3 projectilePosition_){
         Matrix4x4 localToWorld = this.transform.localToWorldMatrix;
-        Matrix4x4 worldToLocal = this.transform.worldToLocalMatrix;
-        Vector3 epicenterInLocal = worldToLocal.MultiplyPoint3x4(projectilePosition_);
 
         int closestTriangle = mesh_.triangles
             .Where((_,i) => i%3==0)
-            .OrderBy(pointer => this.distanceToTriangle(epicenterInLocal, mesh_.vertices.Skip(pointer).Take(3).ToArray()))
+            .OrderBy(pointer => this.distanceToTriangle(projectilePosition_, mesh_.vertices.Skip(pointer).Take(3).ToArray()))
             .First();
 
-        Vector3[] closestVertices = mesh_.vertices.Skip(closestTriangle).Take(3).Select(ver => localToWorld.MultiplyPoint3x4(ver)).ToArray();
+        Vector3[] closestVertices = mesh_.vertices.Skip(closestTriangle).Take(3).ToArray();
 
-        //ptit trix mathématique tsais
-        Vector3 y = Vector3.Normalize(closestVertices[0] - closestVertices[1]);
-        Vector3 z = Vector3.Normalize(closestVertices[0] - closestVertices[2]);
-        Vector3 x = Vector3.Normalize(Vector3.Cross(y, z));
-        z = Vector3.Cross(y,x);
+        Vector3 x;
+        Vector3 y;
+        Vector3 z;
+
+        if(closestVertices[0].x == closestVertices[1].x && closestVertices[1].x == closestVertices[2].x){
+            x = new Vector3(1,0,0);
+            y = new Vector3(0,1,0);
+            z = new Vector3(0,0,1);
+        }else if(closestVertices[0].y == closestVertices[1].y && closestVertices[1].y == closestVertices[2].y){
+            x = new Vector3(0,1,0);
+            y = new Vector3(0,0,1);
+            z = new Vector3(1,0,0);
+        }else if(closestVertices[0].z == closestVertices[1].z && closestVertices[1].z == closestVertices[2].z){
+            x = new Vector3(0,0,1);
+            y = new Vector3(1,0,0);
+            z = new Vector3(0,1,0);
+        }else{
+            print("La face touchée n'a pas été bien calculée ou l\'objet touché n'est pas un cube");
+            x = new Vector3(1,0,0);
+            y = new Vector3(0,1,0);
+            z = new Vector3(0,0,1);
+        }// marchera que pour des cubes
+
         Vector3 origin = projectilePosition_;
+
+        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle]), 0.5f, this.trailMaterial);
+        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+1]), 0.5f, this.trailMaterial);
+        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+2]), 0.5f, this.trailMaterial);
         
         return new Matrix4x4(
             new Vector4(x.x, y.x, z.x, 0),
             new Vector4(x.y, y.y, z.y, 0),
             new Vector4(x.z, y.z, z.z, 0),
-            new Vector4(origin.x, origin.y, origin.z, 1)
+            new Vector4(-origin.x, -origin.y, -origin.z, 1)
         );
     }
 
@@ -108,8 +127,6 @@ public class Surface : MonoBehaviour
 
         Vector3 impactSideEpicenter;
         Vector3 oppositeSideEpicenter;
-
-        print(impactDirectionThickness);
 
         if(Mathf.Abs(impactDirectionThickness.x) > 0){
             impactSideEpicenter = new Vector3(impactSideVertices[0].x, localisedEpicenter.y, localisedEpicenter.z);
@@ -167,12 +184,12 @@ public class Surface : MonoBehaviour
         MeshRenderer mr = GetComponent<MeshRenderer>();
         Mesh baseMesh = mf.mesh;
 
-        Matrix4x4 localImpactSpace = this.getLocalImpactSpace(baseMesh, epiCenter_);
         Matrix4x4 worldToLocal = this.transform.worldToLocalMatrix;
         Matrix4x4 localToWorld = this.transform.localToWorldMatrix;
+        Matrix4x4 localImpactSpace = this.getLocalImpactSpace(baseMesh, worldToLocal.MultiplyPoint3x4(epiCenter_));
 
         float getAngleFromEpiCenter(Vector3 vertex){
-            Vector3 translatedVertex = localImpactSpace.MultiplyPoint3x4(localToWorld.MultiplyPoint3x4(vertex));
+            Vector3 translatedVertex = localImpactSpace.MultiplyPoint3x4(vertex);
             return 180f * Mathf.Atan2(translatedVertex.z, translatedVertex.y) / Mathf.PI;
         }
 
@@ -181,7 +198,7 @@ public class Surface : MonoBehaviour
         foreach (var meshID in Enumerable.Range(0,baseMesh.subMeshCount)){
 
             Vector3[] objectVertices = baseMesh.vertices
-                .OrderBy(v => localImpactSpace.MultiplyPoint3x4(localToWorld.MultiplyPoint3x4(v)).x)
+                .OrderBy(v => localImpactSpace.MultiplyPoint3x4(v).x)
                 .ToArray();
             
             Vector3[] impactSideVertices = objectVertices
