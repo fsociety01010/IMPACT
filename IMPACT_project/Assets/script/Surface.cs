@@ -20,6 +20,9 @@ public class Surface : MonoBehaviour
     public float explosionRadius = 11f;
     public float explosionUpward = 1f;
 
+    [Range(0, 8)]
+    public int addedCrossSplit = 8; // combien de split pour chaque split fait avec les 4 sommets de base de la face impactée
+
     void Start()
     {
         this.trailMaterial = new Material(Shader.Find("Specular"));
@@ -201,17 +204,43 @@ public class Surface : MonoBehaviour
                 .OrderBy(v => localImpactSpace.MultiplyPoint3x4(v).x)
                 .ToArray();
             
-            Vector3[] impactSideVertices = objectVertices
+            Vector3[] existingImpactSideVertices = objectVertices
                 .Take(objectVertices.Length /2)
                 .OrderBy(getAngleFromEpiCenter)
                 .Where((_,i) => i%3==0)
                 .ToArray(); //pas scale et pas en world coordinates attention
 
-            Vector3[] oppositeSideVertices = objectVertices
+            Vector3[] existingOppositeSideVertices = objectVertices
                 .Skip(objectVertices.Length /2)
                 .OrderBy(getAngleFromEpiCenter)
                 .Where((_,i) => i%3==0)
                 .ToArray(); //pas scale et pas en world coordinates attention
+
+            Vector3[] impactSideVertices = new Vector3[(existingImpactSideVertices.Length) + addedCrossSplit*(existingImpactSideVertices.Length)];
+            Vector3[] oppositeSideVertices = new Vector3[(existingOppositeSideVertices.Length) + addedCrossSplit*(existingOppositeSideVertices.Length)];
+
+            for (int i=0; i < impactSideVertices.Length; i ++){
+                if(i % (addedCrossSplit+1) == 0){
+                    impactSideVertices[i] = existingImpactSideVertices[i/(addedCrossSplit+1)];
+                    oppositeSideVertices[i] = existingOppositeSideVertices[i/(addedCrossSplit+1)];
+                }else{
+                    float nOfTheWay = (float)(i%(addedCrossSplit+1)/(float)(addedCrossSplit+1));
+                    int startIndex;
+                    int stopIndex;
+
+                    if((startIndex = i/(addedCrossSplit+1)) < existingImpactSideVertices.Length-1){
+                        stopIndex = startIndex +1;
+                    }else{
+                        startIndex = existingImpactSideVertices.Length-1;
+                        stopIndex = 0;
+                    }
+
+                    print("newPoint " + i + " going from " + startIndex + " to " + stopIndex);
+
+                    impactSideVertices[i] = nOfTheWay * existingImpactSideVertices[stopIndex] + (1-nOfTheWay) * existingImpactSideVertices[startIndex];
+                    oppositeSideVertices[i] = nOfTheWay * existingOppositeSideVertices[stopIndex] + (1-nOfTheWay) * existingOppositeSideVertices[startIndex];
+                }
+            }
 
             //TODO créations de points à la périphérie du points d'impacte
             //TODO appliquer déformation sur ces points
