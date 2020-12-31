@@ -5295,12 +5295,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a555098870d10ba49b8e574fa0c45161, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  k: 5
+  k: 75
   left: {fileID: 1755738206}
   right: {fileID: 639062651}
   textLeft: {fileID: 1157821139}
   textRight: {fileID: 360402773}
   path: Assets/training files/data.txt
+  sun: {fileID: 705507994}
+  sizeOfWindow: 20
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
@@ -5329,7 +5331,7 @@ Light:
   serializedVersion: 10
   m_Type: 1
   m_Shape: 0
-  m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
+  m_Color: {r: 1, g: 0.97848594, b: 0.9198113, a: 1}
   m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
@@ -7735,7 +7737,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_BackGroundColor: {r: 1, g: 1, b: 1, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0

@@ -32,27 +32,40 @@ public class KNN : MonoBehaviour
     //Le chemin vers le fichier de donnée
     public string path;
 
+    public Light sun;
+
+    List<float> frameWindow=new List<float>();
+
+    public int sizeOfWindow = 20;
+
+    float rangeLeap = 430;
+
     //Les données du fichier
     private List<Tuple<string, float[]>> data = new List<Tuple<string, float[]>>();
     void Start()
     {
         controller = new Controller();
-
+        readDataFile();
         //Lit le contenu du fichier
+    }
+
+    private void readDataFile()
+    {
         StreamReader read = new StreamReader(path);
-        while (!read.EndOfStream){
+        while (!read.EndOfStream)
+        {
             string[] line = read.ReadLine().Split(' ');
-            string classe = line[line.Length-1];
-            float[] vals = Array.ConvertAll(line.Slice(0, line.Length - 1).ToArray(),float.Parse);
+            string classe = line[line.Length - 1];
+            float[] vals = Array.ConvertAll(line.Slice(0, line.Length - 1).ToArray(), float.Parse);
             data.Add(new Tuple<string, float[]>(classe, vals));
         }
     }
-
 
     //Active le tracking
     public void enableTracking()
     {
         isTracking = true;
+        readDataFile();
     }
 
     //Désactive le tracking
@@ -79,6 +92,14 @@ public class KNN : MonoBehaviour
             }
         }
         return label[vals.IndexOf(vals.Max())];
+    }
+    
+    public void adjustSunHeight(Hand hand,string classe)
+    {
+        if (classe == "sun")
+        {
+            sun.intensity = Math.Max((float)0.4,Math.Min((float)1.5,hand.PalmPosition.y / rangeLeap));
+        }
     }
 
     // Update is called once per frame
@@ -109,7 +130,6 @@ public class KNN : MonoBehaviour
                 handData.Add(hand.Rotation.w);
                 //Calcule du KNN
 
-                //Mauvaise clasif rn
                 List<Tuple<string, float>> dists = new List<Tuple<string, float>>();
                 foreach(Tuple<string,float[]> tuple in data)
                 {
@@ -130,8 +150,8 @@ public class KNN : MonoBehaviour
                 }else if (hand.IsRight)
                 {
                     textRight.text = "Main Droite : " + classe;
+                    adjustSunHeight(hand, classe);
                 }
-
             }
         }
     }
