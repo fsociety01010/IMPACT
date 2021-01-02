@@ -14,11 +14,12 @@ public class Surface : MonoBehaviour
     public float elasticLimit;
     private Material trailMaterial;
 
-    /*
-    Code Oleksandr*/
-    public float explosionForce = 100f;
+    
+    //Code Oleksandr
     public float explosionRadius = 11f;
     public float explosionUpward = 1f;
+    
+    public float explosionForce = 8f;
 
     [Range(0, 8)]
     public int addedObliqueSplit = 2; // combien de split pour chaque split fait avec les 4 sommets de base de la face impactée
@@ -118,7 +119,6 @@ public class Surface : MonoBehaviour
             new Vector4(-origin.x, -origin.y, -origin.z, 1)
         );
     }
-
     private void explode(Vector3 epicenter_, Rigidbody targetForExplosion_){
         targetForExplosion_.AddExplosionForce(explosionForce, epicenter_, explosionRadius, explosionUpward, ForceMode.Impulse);
     }
@@ -157,6 +157,7 @@ public class Surface : MonoBehaviour
     /// Subdivise la mesh de base plusieurs nouvelles mesh, les mesh vont des vertex existant vers le vertex correspondant au point d'impacte (+ le même point mais du côté opposé de la surface)
     /// </summary>
     private void BreakSurface(Vector3 worldSpaceEpiCenter_, Vector3[,] impactSideVertices_, Vector3[,] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_){
+        Destroy(this.gameObject);
         List<GameObject> fragments = new List<GameObject>();
         Vector3[,] impactSideVertices = convertSideToLocalSpace(impactSideVertices_);
         Vector3[,] oppositeSideVertices =  convertSideToLocalSpace(oppositeSideVertices_);
@@ -210,15 +211,14 @@ public class Surface : MonoBehaviour
                 GO.transform.rotation = this.transform.rotation;
                 GO.AddComponent<MeshRenderer>().material = mr_.materials[currentMeshID_];
                 GO.AddComponent<MeshFilter>().mesh = newMesh;
-                GO.AddComponent<BoxCollider>();
+                MeshCollider collider = GO.AddComponent<MeshCollider>();
+                collider.convex = true;
                 GO.AddComponent<Rigidbody>();
 
                 fragments.Add(GO);
             }
         }
 
-        Destroy(gameObject);
-        
         foreach (var go in fragments){
             this.explode(worldSpaceEpiCenter_, go.GetComponent<Rigidbody>());
         }
@@ -305,21 +305,13 @@ public class Surface : MonoBehaviour
                 }
             }
 
-            /*for(int x=0; x<impactSideVertices.GetLength(0); x++){
-                for(int y=0; y<impactSideVertices.GetLength(1); y++){
-                    this.LeaveTrail(this.transform.localToWorldMatrix.MultiplyPoint3x4(impactSideVertices[x,y]), 0.5f, this.trailMaterial);
-                    this.LeaveTrail(this.transform.localToWorldMatrix.MultiplyPoint3x4(oppositeSideVertices[x,y]), 0.5f, this.trailMaterial);
-                    //print("Between " + localisedEpicenter + " and " + outerLayerImpactSideVertices[x] + " ==> " + innerLayerImpactSideVertices[x,y]);
-                }
-            }*/
-
             //TODO créations de points à la périphérie du points d'impacte
             //TODO appliquer déformation sur ces points
             BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
         }
 
         //mr.enabled = false;
-        Time.timeScale = 0.1f;  //pour ralentir la scène
+        //Time.timeScale = 0.1f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         
