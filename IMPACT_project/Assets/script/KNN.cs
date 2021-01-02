@@ -109,7 +109,9 @@ public class KNN : MonoBehaviour
     {
         StreamReader read = new StreamReader(pathTest);
         int nbTestData = 0;
-        int nbCorrectGuesses=0;
+        int nbCorrectGuesses = 0;
+        List<string> listClasse = new List<string>(new string[]{"closed", "open", "poke", "sun"});
+        int[,] confusionMatrix =new int[4, 4] { { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 } };
         while (!read.EndOfStream)
         {
             string[] line = read.ReadLine().Split(' ');
@@ -129,12 +131,24 @@ public class KNN : MonoBehaviour
             dists.Sort((t1, t2) => t1.Item2.CompareTo(t2.Item2));
             string predictedClasse = getClassOfHand(dists.Slice(0, k).ToArray());
             nbTestData++;
+            confusionMatrix[listClasse.IndexOf(classe), listClasse.IndexOf(predictedClasse)]++;
             if (predictedClasse.Equals(classe))
             {
                 nbCorrectGuesses++;
             }
         }
         print("accuracy : "+ (nbCorrectGuesses*100)/nbTestData+"%");
+        string disp = "";
+        for(int i = 0; i < listClasse.Count; i++)
+        {
+            disp+="[";
+            for (int j = 0; j < listClasse.Count; j++)
+            {
+                disp += confusionMatrix[i,j]+" ";
+            }
+            disp += "]\n";
+        }
+        print(disp);
     }
 
     // Update is called once per frame
