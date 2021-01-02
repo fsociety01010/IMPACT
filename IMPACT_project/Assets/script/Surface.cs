@@ -14,14 +14,21 @@ public class Surface : MonoBehaviour
     public float elasticLimit;
     private Material trailMaterial;
 
-    /*
-    Code Oleksandr*/
-    public float explosionForce = 100f;
+    
+    //Code Oleksandr
     public float explosionRadius = 11f;
     public float explosionUpward = 1f;
+    
+    public float explosionForce = 8f;
 
     [Range(0, 8)]
-    public int addedCrossSplit = 8; // combien de split pour chaque split fait avec les 4 sommets de base de la face impactée
+    public int addedObliqueSplit = 2; // combien de split pour chaque split fait avec les 4 sommets de base de la face impactée
+
+    [Range(0, 8)]
+    public int addedTangentSplit = 2;
+
+    [Range(0, 1)]
+    public float impactConfinementFactor = 1.0f;
 
     void Start()
     {
@@ -101,9 +108,9 @@ public class Surface : MonoBehaviour
 
         Vector3 origin = projectilePosition_;
 
-        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle]), 0.5f, this.trailMaterial);
-        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+1]), 0.5f, this.trailMaterial);
-        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+2]), 0.5f, this.trailMaterial);
+        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle]), 0.1f, this.trailMaterial);
+        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+1]), 0.1f, this.trailMaterial);
+        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+2]), 0.1f, this.trailMaterial);
         
         return new Matrix4x4(
             new Vector4(x.x, y.x, z.x, 0),
@@ -112,68 +119,106 @@ public class Surface : MonoBehaviour
             new Vector4(-origin.x, -origin.y, -origin.z, 1)
         );
     }
-
     private void explode(Vector3 epicenter_, Rigidbody targetForExplosion_){
         targetForExplosion_.AddExplosionForce(explosionForce, epicenter_, explosionRadius, explosionUpward, ForceMode.Impulse);
     }
 
     /// <summary>
-    /// Subdivise la mesh de base plusieurs nouvelles mesh, les mesh vont des vertex existant vers le vertex correspondant au point d'impacte (+ le même point mais du côté opposé de la surface)
+    /// Renvoie le vecteur au côté opposé du point d'impact, nécéssite deux vecteur, un de la face du point d'impact, et l'autre de la face opposée, en plus du point d'impact en lui même (en coordonnées locale)
+    /// Les deux premiers vecteur sont idéalement parallèle.
+    /// ATTENTION, le cas ou un cube à une épaisseur nulle n'est pas supporté
     /// </summary>
-    private void BreakSurface(Vector3 worldSpaceEpiCenter_, Vector3[] impactSideVertices_, Vector3[] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_){
-        List<GameObject> fragments = new List<GameObject>();
-        Vector3[] impactSideVertices =  impactSideVertices_.Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
-        Vector3[] oppositeSideVertices =  oppositeSideVertices_.Select(ver => Vector3.Scale(ver, this.transform.localScale)).ToArray();
-
-        Vector3 impactDirectionThickness = oppositeSideVertices[0] - impactSideVertices[0];
-        Vector3 localisedEpicenter = Vector3.Scale(this.transform.worldToLocalMatrix.MultiplyPoint3x4(worldSpaceEpiCenter_),  this.transform.localScale);
-
-        Vector3 impactSideEpicenter;
-        Vector3 oppositeSideEpicenter;
+    private Vector3 getOppositeSideVertex(Vector3 localSpaceEpicenter_,Vector3 anyImpactSideVertex_, Vector3 anyOppositeSideVertex_){
+        Vector3 impactDirectionThickness = anyOppositeSideVertex_ - anyImpactSideVertex_;
 
         if(Mathf.Abs(impactDirectionThickness.x) > 0){
-            impactSideEpicenter = new Vector3(impactSideVertices[0].x, localisedEpicenter.y, localisedEpicenter.z);
-            oppositeSideEpicenter = new Vector3(oppositeSideVertices[0].x, localisedEpicenter.y, localisedEpicenter.z);
+            return new Vector3(anyOppositeSideVertex_.x, localSpaceEpicenter_.y, localSpaceEpicenter_.z);
         }else if(Mathf.Abs(impactDirectionThickness.y) > 0){
-            impactSideEpicenter = new Vector3(localisedEpicenter.x, impactSideVertices[0].y, localisedEpicenter.z);
-            oppositeSideEpicenter = new Vector3(localisedEpicenter.x, oppositeSideVertices[0].y, localisedEpicenter.z);
+            return new Vector3(localSpaceEpicenter_.x, anyOppositeSideVertex_.y, localSpaceEpicenter_.z);
         }else{
-            impactSideEpicenter = new Vector3(localisedEpicenter.x, localisedEpicenter.y, impactSideVertices[0].z);
-            oppositeSideEpicenter = new Vector3(localisedEpicenter.x, localisedEpicenter.y, oppositeSideVertices[0].z);
+            return new Vector3(localSpaceEpicenter_.x, localSpaceEpicenter_.y, anyOppositeSideVertex_.z);
         }
-        //ATTENTION, le cas ou un cube à une épaisseur nul n'est pas supporté
+    }
 
-        for (int vIndex = 0; vIndex < impactSideVertices_.Length; vIndex ++){
-            
-            Mesh newMesh = new Mesh();
-
-            if(vIndex+1 < impactSideVertices.Length){
-                newMesh.vertices = new Vector3[] {
-                    impactSideVertices[vIndex+1], impactSideVertices[vIndex], impactSideEpicenter,
-                    oppositeSideVertices[vIndex+1], oppositeSideVertices[vIndex], oppositeSideEpicenter
-                };              
-            }else{
-                newMesh.vertices = new Vector3[] {
-                    impactSideVertices[vIndex], impactSideVertices[0], impactSideEpicenter,
-                    oppositeSideVertices[vIndex], oppositeSideVertices[0], oppositeSideEpicenter
-                };
+    /// <summary>
+    /// Sert à convertire les coordonnées des vecteurs d'impacte contenu dans une 2D array en localSpace
+    /// </summary>
+    private Vector3[,] convertSideToLocalSpace(Vector3[,] sideVertices_) {
+        Vector3[,] result = new Vector3[sideVertices_.GetLength(0),sideVertices_.GetLength(1)];
+        for (int row = 0; row < sideVertices_.GetLength(0); row++) {
+            for (int col = 0; col < sideVertices_.GetLength(1); col++) {
+                result[row,col] = Vector3.Scale(sideVertices_[row,col], this.transform.localScale);
             }
-            
-            newMesh.triangles = new int[] { 0,1,2, 2,5,3, 3,0,2, 2,1,5, 5,1,4, 4,1,0, 0,3,4, 4,3,5};
-            
-            GameObject GO = new GameObject("Fragment Triangle " + vIndex);
-            GO.transform.position = this.transform.position;
-            GO.transform.rotation = this.transform.rotation;
-            GO.AddComponent<MeshRenderer>().material = mr_.materials[currentMeshID_];
-            GO.AddComponent<MeshFilter>().mesh = newMesh;
-            GO.AddComponent<BoxCollider>();
-            GO.AddComponent<Rigidbody>();
-
-            fragments.Add(GO);
-
         }
-        Destroy(gameObject);
+        return result;
+    }
+
+    /// <summary>
+    /// Subdivise la mesh de base plusieurs nouvelles mesh, les mesh vont des vertex existant vers le vertex correspondant au point d'impacte (+ le même point mais du côté opposé de la surface)
+    /// </summary>
+    private void BreakSurface(Vector3 worldSpaceEpiCenter_, Vector3[,] impactSideVertices_, Vector3[,] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_){
+        Destroy(this.gameObject);
+        List<GameObject> fragments = new List<GameObject>();
+        Vector3[,] impactSideVertices = convertSideToLocalSpace(impactSideVertices_);
+        Vector3[,] oppositeSideVertices =  convertSideToLocalSpace(oppositeSideVertices_);
         
+        Vector3 localisedEpicenter = Vector3.Scale(this.transform.worldToLocalMatrix.MultiplyPoint3x4(worldSpaceEpiCenter_),  this.transform.localScale);
+        Vector3 oppositeSideEpicenter = this.getOppositeSideVertex(localisedEpicenter, impactSideVertices[0, this.addedTangentSplit], oppositeSideVertices[0, this.addedTangentSplit]);
+
+        for (int obliqueIndex = 0; obliqueIndex < impactSideVertices.GetLength(0); obliqueIndex ++){
+            for (int tangentIndex = 0; tangentIndex < impactSideVertices.GetLength(1); tangentIndex++){
+                Mesh newMesh = new Mesh();
+
+                if(tangentIndex == 0){
+                    if(obliqueIndex+1 < impactSideVertices.GetLength(0)){
+                        newMesh.vertices = new Vector3[] {
+                            impactSideVertices[obliqueIndex, 0], impactSideVertices[obliqueIndex+1, 0], localisedEpicenter,
+                            oppositeSideVertices[obliqueIndex, 0], oppositeSideVertices[obliqueIndex+1, 0], oppositeSideEpicenter
+                        };
+                    }else{
+                        newMesh.vertices = new Vector3[] {
+                            impactSideVertices[obliqueIndex, tangentIndex], impactSideVertices[0, tangentIndex], localisedEpicenter,
+                            oppositeSideVertices[obliqueIndex, tangentIndex], oppositeSideVertices[0, tangentIndex], oppositeSideEpicenter
+                        };
+                    }
+                    
+                    newMesh.triangles = new int[] {0,1,2, 2,5,3, 3,0,2, 2,1,5, 5,1,4, 4,1,0, 0,3,4, 4,3,5};
+                }else{
+                    if(obliqueIndex+1 < impactSideVertices.GetLength(0)){
+                        newMesh.vertices = new Vector3[] {
+                            impactSideVertices[obliqueIndex, tangentIndex], impactSideVertices[obliqueIndex+1, tangentIndex], impactSideVertices[obliqueIndex+1, tangentIndex-1], impactSideVertices[obliqueIndex, tangentIndex-1],
+                            oppositeSideVertices[obliqueIndex, tangentIndex], oppositeSideVertices[obliqueIndex+1, tangentIndex], oppositeSideVertices[obliqueIndex+1, tangentIndex-1], oppositeSideVertices[obliqueIndex, tangentIndex-1]
+                        };
+                    }else{
+                        newMesh.vertices = new Vector3[] {
+                            impactSideVertices[obliqueIndex, tangentIndex], impactSideVertices[0, tangentIndex], impactSideVertices[0, tangentIndex-1], impactSideVertices[obliqueIndex, tangentIndex-1],
+                            oppositeSideVertices[obliqueIndex, tangentIndex], oppositeSideVertices[0, tangentIndex], oppositeSideVertices[0, tangentIndex-1], oppositeSideVertices[obliqueIndex, tangentIndex-1]
+                        };
+                    }
+                    
+                    newMesh.triangles = new int[] { 
+                        0,1,2, 2,3,0,   //top
+                        0,3,7, 7,4,0,   //left
+                        0,4,1, 1,4,5,   //back
+                        5,4,7, 7,6,5,   //bottom
+                        5,6,1, 1,6,2,   //right
+                        2,6,7, 7,3,2    //front
+                    };
+                }
+                
+                GameObject GO = new GameObject("Fragment Triangle " + obliqueIndex);
+                GO.transform.position = this.transform.position;
+                GO.transform.rotation = this.transform.rotation;
+                GO.AddComponent<MeshRenderer>().material = mr_.materials[currentMeshID_];
+                GO.AddComponent<MeshFilter>().mesh = newMesh;
+                MeshCollider collider = GO.AddComponent<MeshCollider>();
+                collider.convex = true;
+                GO.AddComponent<Rigidbody>();
+
+                fragments.Add(GO);
+            }
+        }
+
         foreach (var go in fragments){
             this.explode(worldSpaceEpiCenter_, go.GetComponent<Rigidbody>());
         }
@@ -191,9 +236,17 @@ public class Surface : MonoBehaviour
         Matrix4x4 localToWorld = this.transform.localToWorldMatrix;
         Matrix4x4 localImpactSpace = this.getLocalImpactSpace(baseMesh, worldToLocal.MultiplyPoint3x4(epiCenter_));
 
+        Vector3 localisedEpicenter = this.transform.worldToLocalMatrix.MultiplyPoint3x4(epiCenter_);
+
+        Vector3 oppositeSideEpicenter;
+
         float getAngleFromEpiCenter(Vector3 vertex){
             Vector3 translatedVertex = localImpactSpace.MultiplyPoint3x4(vertex);
             return 180f * Mathf.Atan2(translatedVertex.z, translatedVertex.y) / Mathf.PI;
+        }
+
+        Vector3 NOfTheWayBetween(Vector3 start, Vector3 stop, float n){
+            return n * stop + (1-n) * start;
         }
 
         LeaveTrail(epiCenter_, 0.1f, this.trailMaterial);
@@ -216,29 +269,39 @@ public class Surface : MonoBehaviour
                 .Where((_,i) => i%3==0)
                 .ToArray(); //pas scale et pas en world coordinates attention
 
-            Vector3[] impactSideVertices = new Vector3[(existingImpactSideVertices.Length) + addedCrossSplit*(existingImpactSideVertices.Length)];
-            Vector3[] oppositeSideVertices = new Vector3[(existingOppositeSideVertices.Length) + addedCrossSplit*(existingOppositeSideVertices.Length)];
+            oppositeSideEpicenter = this.getOppositeSideVertex(localisedEpicenter, existingImpactSideVertices[0], existingOppositeSideVertices[0]);
 
-            for (int i=0; i < impactSideVertices.Length; i ++){
-                if(i % (addedCrossSplit+1) == 0){
-                    impactSideVertices[i] = existingImpactSideVertices[i/(addedCrossSplit+1)];
-                    oppositeSideVertices[i] = existingOppositeSideVertices[i/(addedCrossSplit+1)];
-                }else{
-                    float nOfTheWay = (float)(i%(addedCrossSplit+1)/(float)(addedCrossSplit+1));
+            int totalAmountOfObliqueSplits = (existingImpactSideVertices.Length) + this.addedObliqueSplit*(existingImpactSideVertices.Length);
+
+            //l'ordre des vecteurs est: dans le sens de rotation et ensuite du point d'impacte vers les extrémités (= rotate puis intérieur vers exterieur)
+            Vector3[,] impactSideVertices = new Vector3[totalAmountOfObliqueSplits, this.addedTangentSplit+1]; //+1 pour les vecteurs existants sur chaque segment oblique
+            Vector3[,] oppositeSideVertices = new Vector3[totalAmountOfObliqueSplits, this.addedTangentSplit+1];
+
+            for (int i=0; i < impactSideVertices.GetLength(0); i ++){
+                if(i % (this.addedObliqueSplit+1) == 0){ //les point à attribuer existent déjà
+                    impactSideVertices[i, this.addedTangentSplit] = existingImpactSideVertices[i/(this.addedObliqueSplit+1)];
+                    oppositeSideVertices[i, this.addedTangentSplit] = existingOppositeSideVertices[i/(this.addedObliqueSplit+1)];
+                }else{ //les points à attribuer doivent être extrapolé des point existants
+                    float nOfTheWay = (float)(i%(this.addedObliqueSplit+1)/(float)(this.addedObliqueSplit+1));
                     int startIndex;
                     int stopIndex;
 
-                    if((startIndex = i/(addedCrossSplit+1)) < existingImpactSideVertices.Length-1){
+                    if((startIndex = i/(this.addedObliqueSplit+1)) < existingImpactSideVertices.Length-1){
                         stopIndex = startIndex +1;
                     }else{
                         startIndex = existingImpactSideVertices.Length-1;
                         stopIndex = 0;
                     }
 
-                    print("newPoint " + i + " going from " + startIndex + " to " + stopIndex);
+                    impactSideVertices[i, this.addedTangentSplit] = NOfTheWayBetween(existingImpactSideVertices[startIndex], existingImpactSideVertices[stopIndex], nOfTheWay);
+                    oppositeSideVertices[i, this.addedTangentSplit] = NOfTheWayBetween(existingOppositeSideVertices[startIndex], existingOppositeSideVertices[stopIndex], nOfTheWay);
+                }
 
-                    impactSideVertices[i] = nOfTheWay * existingImpactSideVertices[stopIndex] + (1-nOfTheWay) * existingImpactSideVertices[startIndex];
-                    oppositeSideVertices[i] = nOfTheWay * existingOppositeSideVertices[stopIndex] + (1-nOfTheWay) * existingOppositeSideVertices[startIndex];
+                //pour i allant de 0 à addedTangentSplit+1, rajouter un split ...
+                for(int j=1; j<this.addedTangentSplit+1; j++){
+                    float n = (this.impactConfinementFactor*j)/(this.addedTangentSplit+1.0f);
+                    impactSideVertices[i,j-1] = NOfTheWayBetween(localisedEpicenter, impactSideVertices[i, this.addedTangentSplit], n);
+                    oppositeSideVertices[i, j-1] =  NOfTheWayBetween(oppositeSideEpicenter, oppositeSideVertices[i, this.addedTangentSplit], n);
                 }
             }
 
@@ -248,7 +311,7 @@ public class Surface : MonoBehaviour
         }
 
         //mr.enabled = false;
-        Time.timeScale = 0.01f;  //pour ralentir la scène
+        //Time.timeScale = 0.1f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         
