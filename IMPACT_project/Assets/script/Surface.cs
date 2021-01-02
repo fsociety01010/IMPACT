@@ -21,7 +21,13 @@ public class Surface : MonoBehaviour
     public float explosionUpward = 1f;
 
     [Range(0, 8)]
-    public int addedCrossSplit = 8; // combien de split pour chaque split fait avec les 4 sommets de base de la face impactée
+    public int addedObliqueSplit = 2; // combien de split pour chaque split fait avec les 4 sommets de base de la face impactée
+
+    [Range(0, 8)]
+    public int addedTangentSplit = 2;
+
+    [Range(0, 1)]
+    public float impactConfinementFactor = 1.0f;
 
     void Start()
     {
@@ -101,9 +107,9 @@ public class Surface : MonoBehaviour
 
         Vector3 origin = projectilePosition_;
 
-        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle]), 0.5f, this.trailMaterial);
-        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+1]), 0.5f, this.trailMaterial);
-        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+2]), 0.5f, this.trailMaterial);
+        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle]), 0.1f, this.trailMaterial);
+        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+1]), 0.1f, this.trailMaterial);
+        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+2]), 0.1f, this.trailMaterial);
         
         return new Matrix4x4(
             new Vector4(x.x, y.x, z.x, 0),
@@ -159,7 +165,7 @@ public class Surface : MonoBehaviour
                 };
             }
             
-            newMesh.triangles = new int[] { 0,1,2, 2,5,3, 3,0,2, 2,1,5, 5,1,4, 4,1,0, 0,3,4, 4,3,5};
+            newMesh.triangles = new int[] {0,1,2, 2,5,3, 3,0,2, 2,1,5, 5,1,4, 4,1,0, 0,3,4, 4,3,5};
             
             GameObject GO = new GameObject("Fragment Triangle " + vIndex);
             GO.transform.position = this.transform.position;
@@ -191,9 +197,15 @@ public class Surface : MonoBehaviour
         Matrix4x4 localToWorld = this.transform.localToWorldMatrix;
         Matrix4x4 localImpactSpace = this.getLocalImpactSpace(baseMesh, worldToLocal.MultiplyPoint3x4(epiCenter_));
 
+        Vector3 localisedEpicenter = this.transform.worldToLocalMatrix.MultiplyPoint3x4(epiCenter_);
+
         float getAngleFromEpiCenter(Vector3 vertex){
             Vector3 translatedVertex = localImpactSpace.MultiplyPoint3x4(vertex);
             return 180f * Mathf.Atan2(translatedVertex.z, translatedVertex.y) / Mathf.PI;
+        }
+
+        Vector3 NOfTheWayBetween(Vector3 start, Vector3 stop, float n){
+            return n * stop + (1-n) * start;
         }
 
         LeaveTrail(epiCenter_, 0.1f, this.trailMaterial);
@@ -216,39 +228,55 @@ public class Surface : MonoBehaviour
                 .Where((_,i) => i%3==0)
                 .ToArray(); //pas scale et pas en world coordinates attention
 
-            Vector3[] impactSideVertices = new Vector3[(existingImpactSideVertices.Length) + addedCrossSplit*(existingImpactSideVertices.Length)];
-            Vector3[] oppositeSideVertices = new Vector3[(existingOppositeSideVertices.Length) + addedCrossSplit*(existingOppositeSideVertices.Length)];
+            int totalAmountOfObliqueSplits = (existingImpactSideVertices.Length) + this.addedObliqueSplit*(existingImpactSideVertices.Length);
 
-            for (int i=0; i < impactSideVertices.Length; i ++){
-                if(i % (addedCrossSplit+1) == 0){
-                    impactSideVertices[i] = existingImpactSideVertices[i/(addedCrossSplit+1)];
-                    oppositeSideVertices[i] = existingOppositeSideVertices[i/(addedCrossSplit+1)];
-                }else{
-                    float nOfTheWay = (float)(i%(addedCrossSplit+1)/(float)(addedCrossSplit+1));
+            Vector3[] outerLayerImpactSideVertices = new Vector3[totalAmountOfObliqueSplits];
+            Vector3[] outerLayerOppositeSideVertices = new Vector3[totalAmountOfObliqueSplits];
+
+            Vector3[,] innerLayerImpactSideVertices = new Vector3[totalAmountOfObliqueSplits, this.addedTangentSplit];
+            Vector3[,] innerLayerOppositeSideVertices = new Vector3[totalAmountOfObliqueSplits, this.addedTangentSplit];
+
+            for (int i=0; i < outerLayerImpactSideVertices.Length; i ++){
+                if(i % (this.addedObliqueSplit+1) == 0){ //les point à attribuer existent déjà
+                    outerLayerImpactSideVertices[i] = existingImpactSideVertices[i/(this.addedObliqueSplit+1)];
+                    outerLayerOppositeSideVertices[i] = existingOppositeSideVertices[i/(this.addedObliqueSplit+1)];
+                }else{ //les points à attribuer doivent être extrapolé des point existants
+                    float nOfTheWay = (float)(i%(this.addedObliqueSplit+1)/(float)(this.addedObliqueSplit+1));
                     int startIndex;
                     int stopIndex;
 
-                    if((startIndex = i/(addedCrossSplit+1)) < existingImpactSideVertices.Length-1){
+                    if((startIndex = i/(this.addedObliqueSplit+1)) < existingImpactSideVertices.Length-1){
                         stopIndex = startIndex +1;
                     }else{
                         startIndex = existingImpactSideVertices.Length-1;
                         stopIndex = 0;
                     }
 
-                    print("newPoint " + i + " going from " + startIndex + " to " + stopIndex);
+                    outerLayerImpactSideVertices[i] = NOfTheWayBetween(existingImpactSideVertices[startIndex], existingImpactSideVertices[stopIndex], nOfTheWay);
+                    outerLayerOppositeSideVertices[i] = NOfTheWayBetween(existingOppositeSideVertices[startIndex], existingOppositeSideVertices[stopIndex], nOfTheWay);
+                }
 
-                    impactSideVertices[i] = nOfTheWay * existingImpactSideVertices[stopIndex] + (1-nOfTheWay) * existingImpactSideVertices[startIndex];
-                    oppositeSideVertices[i] = nOfTheWay * existingOppositeSideVertices[stopIndex] + (1-nOfTheWay) * existingOppositeSideVertices[startIndex];
+                //pour i allant de 0 à addedTangentSplit+1, rajouter un split ...
+                for(int j=1; j<this.addedTangentSplit+1; j++){
+                    float n = (this.impactConfinementFactor*j)/(this.addedTangentSplit+1.0f);
+                    innerLayerImpactSideVertices[i,j-1] = NOfTheWayBetween(localisedEpicenter, outerLayerImpactSideVertices[i], n);
+                }
+            }
+
+            for(int x=0; x<innerLayerImpactSideVertices.GetLength(0); x++){
+                for(int y=0; y<innerLayerImpactSideVertices.GetLength(1); y++){
+                    this.LeaveTrail(this.transform.localToWorldMatrix.MultiplyPoint3x4(innerLayerImpactSideVertices[x,y]), 0.5f, this.trailMaterial);
+                    //print("Between " + localisedEpicenter + " and " + outerLayerImpactSideVertices[x] + " ==> " + innerLayerImpactSideVertices[x,y]);
                 }
             }
 
             //TODO créations de points à la périphérie du points d'impacte
             //TODO appliquer déformation sur ces points
-            BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
+            BreakSurface(epiCenter_, outerLayerImpactSideVertices, outerLayerOppositeSideVertices, meshID, mr);
         }
 
         //mr.enabled = false;
-        Time.timeScale = 0.01f;  //pour ralentir la scène
+        Time.timeScale = 0.2f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         
