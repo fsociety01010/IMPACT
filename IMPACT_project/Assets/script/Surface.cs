@@ -248,7 +248,7 @@ public class Surface : MonoBehaviour
         }
 
         //mr.enabled = false;
-        Time.timeScale = 0.01f;  //pour ralentir la scène
+        //Time.timeScale = 0.01f;  //pour ralentir la scène
         yield return new WaitForSeconds(0.8f);
         Time.timeScale = 1.0f;
         

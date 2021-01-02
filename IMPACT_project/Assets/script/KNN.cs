@@ -10,7 +10,6 @@ using System.Linq;
 
 public class KNN : MonoBehaviour
 {
-    // Start is called before the first frame update
 
 
     public int k = 3;
@@ -32,6 +31,9 @@ public class KNN : MonoBehaviour
     //Le chemin vers le fichier de donnée
     public string path;
 
+    //Le chemin vers le fichier de donnée de test
+    public string pathTest;
+
     public Light sun;
 
     List<float> frameWindow=new List<float>();
@@ -42,6 +44,7 @@ public class KNN : MonoBehaviour
 
     //Les données du fichier
     private List<Tuple<string, float[]>> data = new List<Tuple<string, float[]>>();
+
     void Start()
     {
         controller = new Controller();
@@ -100,6 +103,38 @@ public class KNN : MonoBehaviour
         {
             sun.intensity = Math.Max((float)0.4,Math.Min((float)1.5,hand.PalmPosition.y / rangeLeap));
         }
+    }
+
+    public void testKNN()
+    {
+        StreamReader read = new StreamReader(pathTest);
+        int nbTestData = 0;
+        int nbCorrectGuesses=0;
+        while (!read.EndOfStream)
+        {
+            string[] line = read.ReadLine().Split(' ');
+            string classe = line[line.Length - 1];
+            float[] vals = Array.ConvertAll(line.Slice(0, line.Length - 1).ToArray(), float.Parse);
+
+            List<Tuple<string, float>> dists = new List<Tuple<string, float>>();
+            foreach (Tuple<string, float[]> tuple in data)
+            {
+                float d = 0;
+                for (int i = 0; i < tuple.Item2.Length; i++)
+                {
+                    d += Mathf.Pow(tuple.Item2[i] - vals[i], 2);
+                }
+                dists.Add(new Tuple<string, float>(tuple.Item1, Mathf.Sqrt(d)));
+            }
+            dists.Sort((t1, t2) => t1.Item2.CompareTo(t2.Item2));
+            string predictedClasse = getClassOfHand(dists.Slice(0, k).ToArray());
+            nbTestData++;
+            if (predictedClasse.Equals(classe))
+            {
+                nbCorrectGuesses++;
+            }
+        }
+        print("accuracy : "+ (nbCorrectGuesses*100)/nbTestData+"%");
     }
 
     // Update is called once per frame
