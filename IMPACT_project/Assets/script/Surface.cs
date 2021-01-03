@@ -14,12 +14,10 @@ public class Surface : MonoBehaviour
     public float elasticLimit;
     private Material trailMaterial;
 
-    
-    //Code Oleksandr
-    public float explosionRadius = 11f;
-    public float explosionUpward = 1f;
-    
-    public float explosionForce = 8f;
+    // Maintenant, on prends les donnees dynamiques
+    float explosionRadius = 1f;
+    float explosionUpward = 1f;    
+    float explosionForce = 1f;
 
     [Range(0, 8)]
     public int addedObliqueSplit = 2; // combien de split pour chaque split fait avec les 4 sommets de base de la face impactée
@@ -122,6 +120,14 @@ public class Surface : MonoBehaviour
     private void explode(Vector3 epicenter_, Rigidbody targetForExplosion_){
         targetForExplosion_.AddExplosionForce(explosionForce, epicenter_, explosionRadius, explosionUpward, ForceMode.Impulse);
     }
+    private void calcForceExplosion(Collision colObject)
+    {
+        explosionUpward = colObject.impulse.z;
+        explosionForce = (float)(colObject.rigidbody.mass * (Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x)) * 0.3f);
+        Debug.Log("Explosion Force - " + explosionForce);
+        explosionRadius = (float)(colObject.rigidbody.mass * Math.Sqrt((Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x)) * 0.2f));
+        Debug.Log("Explosion Radius - " + explosionRadius);
+    }
 
     /// <summary>
     /// Renvoie le vecteur au côté opposé du point d'impact, nécéssite deux vecteur, un de la face du point d'impact, et l'autre de la face opposée, en plus du point d'impact en lui même (en coordonnées locale)
@@ -156,7 +162,7 @@ public class Surface : MonoBehaviour
     /// <summary>
     /// Subdivise la mesh de base plusieurs nouvelles mesh, les mesh vont des vertex existant vers le vertex correspondant au point d'impacte (+ le même point mais du côté opposé de la surface)
     /// </summary>
-    private void BreakSurface(Vector3 worldSpaceEpiCenter_, Vector3[,] impactSideVertices_, Vector3[,] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_){
+    private void BreakSurface(Vector3 worldSpaceEpiCenter_, Vector3[,] impactSideVertices_, Vector3[,] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_, Collision colObject){
         Destroy(this.gameObject);
         List<GameObject> fragments = new List<GameObject>();
         Vector3[,] impactSideVertices = convertSideToLocalSpace(impactSideVertices_);
@@ -218,6 +224,7 @@ public class Surface : MonoBehaviour
                 fragments.Add(GO);
             }
         }
+        calcForceExplosion(colObject);
 
         foreach (var go in fragments){
             this.explode(worldSpaceEpiCenter_, go.GetComponent<Rigidbody>());
@@ -227,7 +234,7 @@ public class Surface : MonoBehaviour
     /// <summary>
     /// Génere l'ensemble des déformations liées au point d'impacte
     /// </summary>
-    private IEnumerator Impact(Vector3 epiCenter_){
+    private IEnumerator Impact(Vector3 epiCenter_, Collision colObject){
         MeshFilter mf = GetComponent<MeshFilter>();
         MeshRenderer mr = GetComponent<MeshRenderer>();
         Mesh baseMesh = mf.mesh;
@@ -307,7 +314,7 @@ public class Surface : MonoBehaviour
 
             //TODO créations de points à la périphérie du points d'impacte
             //TODO appliquer déformation sur ces points
-            BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
+            BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr, colObject);
         }
 
         //mr.enabled = false;
@@ -321,8 +328,8 @@ public class Surface : MonoBehaviour
         if(counter == 0 ){
             counter++;
             Vector3 impactPoint = col.GetContact(0).point;
-            //Debug.Log(impactPoint);
-            StartCoroutine(this.Impact(impactPoint));
+            // Debug.Log(col.rigidbody.velocity);
+            StartCoroutine(this.Impact(impactPoint,col));
         }
     }
 
