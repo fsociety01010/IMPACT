@@ -10,15 +10,17 @@ using UnityEngine;
 public class Surface : MonoBehaviour
 {
     private static int counter = 0;
+
+    /*
     public float fractureToughness;
     public float elasticLimit;
+    */
     private Material trailMaterial;
-
+    
     
     //Code Oleksandr
     public float explosionRadius = 11f;
     public float explosionUpward = 1f;
-    
     public float explosionForce = 8f;
 
     [Range(0, 8)]
@@ -28,7 +30,9 @@ public class Surface : MonoBehaviour
     public int addedTangentSplit = 2;
 
     [Range(0, 1)]
-    public float impactConfinementFactor = 1.0f;
+    public float impactConfinementFactor = 0.7f;
+
+    public bool isImpact = true;
 
 
     //TODO à renomer
@@ -410,8 +414,8 @@ public class Surface : MonoBehaviour
             }
 
             //TODO appliquer déformation sur ces points
-            //this.BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
-            this.DeformSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mf);
+            if(this.isImpact) this.BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
+            else this.DeformSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mf);
         }
 
         //mr.enabled = false;
