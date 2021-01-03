@@ -211,6 +211,7 @@ public class Surface : MonoBehaviour
                 GO.transform.rotation = this.transform.rotation;
                 GO.AddComponent<MeshRenderer>().material = mr_.materials[currentMeshID_];
                 GO.AddComponent<MeshFilter>().mesh = newMesh;
+                GO.GetComponent<MeshFilter>().mesh.RecalculateNormals();
                 MeshCollider collider = GO.AddComponent<MeshCollider>();
                 collider.convex = true;
                 GO.AddComponent<Rigidbody>();
@@ -305,7 +306,6 @@ public class Surface : MonoBehaviour
                 }
             }
 
-            //TODO créations de points à la périphérie du points d'impacte
             //TODO appliquer déformation sur ces points
             BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
         }
