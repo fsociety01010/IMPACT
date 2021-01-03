@@ -361,7 +361,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: bf80319dac15241128782f687535d4f7, type: 2}
+  - {fileID: 2100000, guid: d3c688073a79f7342aa2095969c63950, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -529,9 +529,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fractureToughness: 0
   elasticLimit: 0
-  explosionForce: 30
   explosionRadius: 11
   explosionUpward: 1
+  explosionForce: 30
+  addedObliqueSplit: 2
+  addedTangentSplit: 2
+  impactConfinementFactor: 1
 --- !u!54 &2014770408
 Rigidbody:
   m_ObjectHideFlags: 0
