@@ -30,6 +30,21 @@ public class Surface : MonoBehaviour
     [Range(0, 1)]
     public float impactConfinementFactor = 1.0f;
 
+
+    //TODO à renomer
+    [Range(0, 0.5f)]
+    public float deformRadius = 0.2f;
+    [Range(0, 10)]
+    public float maxDeform = 0.1f;
+    [Range(0, 1)]
+    public float damageFalloff = 1;
+    [Range(0, 10)]
+    public float damageMultiplier = 1;
+    [Range(0, 100000)]
+    public float minDamage = 1;
+
+
+
     void Start()
     {
         this.trailMaterial = new Material(Shader.Find("Specular"));
@@ -108,9 +123,9 @@ public class Surface : MonoBehaviour
 
         Vector3 origin = projectilePosition_;
 
-        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle]), 0.1f, this.trailMaterial);
-        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+1]), 0.1f, this.trailMaterial);
-        this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+2]), 0.1f, this.trailMaterial);
+        //this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle]), 0.1f, this.trailMaterial);
+        //this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+1]), 0.1f, this.trailMaterial);
+        //this.LeaveTrail(localToWorld.MultiplyPoint3x4(mesh_.vertices[closestTriangle+2]), 0.1f, this.trailMaterial);
         
         return new Matrix4x4(
             new Vector4(x.x, y.x, z.x, 0),
@@ -225,6 +240,94 @@ public class Surface : MonoBehaviour
         }
     }
 
+    /// src: https://stackoverflow.com/questions/3150678/using-linq-with-2d-array-select-not-found
+    public IEnumerable<T> Flatten<T>(T[,] map) {
+    for (int row = 0; row < map.GetLength(0); row++) {
+        for (int col = 0; col < map.GetLength(1); col++) {
+            yield return map[row,col];
+            }
+        }
+    }
+    private void DeformSurface(Vector3 worldSpaceEpiCenter_, Vector3[,] impactSideVertices_, Vector3[,] oppositeSideVertices_, int currentMeshID_, MeshFilter mf_){
+        Vector3[,] impactSideVertices = impactSideVertices_;
+        Vector3[,] oppositeSideVertices = oppositeSideVertices_;
+        Vector3 localisedEpicenter = this.transform.worldToLocalMatrix.MultiplyPoint3x4(worldSpaceEpiCenter_);
+
+        Vector3 impactDirection = Vector3.Normalize(oppositeSideVertices[0,0] - impactSideVertices[0,0]);
+
+        for (int obliqueIndex = 0; obliqueIndex < impactSideVertices.GetLength(0); obliqueIndex ++){
+            for (int tangentIndex = 0; tangentIndex < impactSideVertices.GetLength(1); tangentIndex++){
+                float distanceFromImpact = Vector3.Distance(impactSideVertices[obliqueIndex, tangentIndex], localisedEpicenter);
+                if(distanceFromImpact < this.deformRadius){
+                    
+                    float deformationFactor = 1 - (distanceFromImpact/this.deformRadius) * this.damageFalloff;
+
+                    Vector3 deformation = deformationFactor * localisedEpicenter;
+
+                    impactSideVertices[obliqueIndex, tangentIndex] -= Vector3.Scale(impactDirection, deformation) * this.damageMultiplier;
+                    oppositeSideVertices[obliqueIndex, tangentIndex] -= Vector3.Scale(impactDirection, deformation) * this.damageMultiplier;
+                }
+            }
+        }
+
+        IEnumerable<int> getFrontTopRightBottomLeft(){
+            int o = impactSideVertices.GetLength(0);
+            int t = impactSideVertices.GetLength(1);
+
+            //sens normal
+            for (int obliqueIndex = 0; obliqueIndex < o; obliqueIndex ++){
+                for (int tangentIndex = 0; tangentIndex < t; tangentIndex++){
+                    int index = (obliqueIndex*t) + tangentIndex;
+                    if(tangentIndex == t-1){
+                        //extremité face avant ==> face avant à 4 côtés + face lattérale
+                        yield return index;
+                        yield return ((index+t) % (t*o));
+                        yield return ((index+t) % (t*o)) + (t*o);
+                        yield return ((index+t) % (t*o)) + (t*o);
+                        yield return ((index) % (t*o)) + (t*o);
+                        yield return index;
+
+                        if(tangentIndex == 0 && obliqueIndex % (o/2) == 0) foreach (var item in new int[]{t*(o/2),t*(o/4),0}) yield return (index+item) % (t*o);
+                        else foreach (var item in new int[]{0,-1,t-1,t-1,t,0}) yield return (index+item) % (t*o);
+                    }else if(tangentIndex == 0){
+                        //Intérieur face avant à trois coté
+                        if(obliqueIndex % (o/2) == 0) foreach (var item in new int[]{t*(o/2),t*(o/4),0}) yield return (index+item) % (t*o);
+                        else continue;
+                    }else{
+                        //milieu face avant à 4 côtés
+                        foreach (var item in new int[]{0,-1,t-1,t-1,t,0}) yield return (index+item) % (t*o);
+                    }
+                }
+            }
+        }
+        
+        IEnumerable<int> getBack(){
+            int o = impactSideVertices.GetLength(0);
+            int t = impactSideVertices.GetLength(1);
+
+            //sens inverse
+            for (int obliqueIndex = 0; obliqueIndex < o; obliqueIndex ++){
+                for (int tangentIndex = 0; tangentIndex < t; tangentIndex++){
+                    int index = (t*o) + (obliqueIndex*t) + tangentIndex;
+                    if(tangentIndex == 0){
+                        //Intérieur face avant à trois coté
+                        if(obliqueIndex % (o/2) == 0) foreach (var item in new int[]{0,t*(o/4),t*(o/2)}) yield return ((index+item) % (t*o)) + (t*o); 
+                        else continue;
+                    }else{
+                        //milieu face avant à 4 côtés
+                        foreach (var item in new int[]{0,t,t-1,t-1,-1,0}) yield return ((index+item) % (t*o)) + (t*o);
+                    }
+                }
+            }
+        }
+
+        Mesh newMesh = new Mesh();
+        newMesh.vertices = this.Flatten(impactSideVertices).Concat(this.Flatten(oppositeSideVertices)).ToArray();
+        newMesh.triangles = getFrontTopRightBottomLeft().Concat(getBack()).ToArray();
+        newMesh.RecalculateNormals();
+        mf_.mesh = newMesh;
+    }
+
     /// <summary>
     /// Génere l'ensemble des déformations liées au point d'impacte
     /// </summary>
@@ -250,7 +353,7 @@ public class Surface : MonoBehaviour
             return n * stop + (1-n) * start;
         }
 
-        LeaveTrail(epiCenter_, 0.1f, this.trailMaterial);
+        //LeaveTrail(epiCenter_, 0.1f, this.trailMaterial);
 
         foreach (var meshID in Enumerable.Range(0,baseMesh.subMeshCount)){
 
@@ -307,7 +410,8 @@ public class Surface : MonoBehaviour
             }
 
             //TODO appliquer déformation sur ces points
-            BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
+            //this.BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr);
+            this.DeformSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mf);
         }
 
         //mr.enabled = false;
