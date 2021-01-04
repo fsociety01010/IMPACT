@@ -578,11 +578,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24894a7900519284b85fc266456695b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fractureToughness: 0
-  elasticLimit: 0
   addedObliqueSplit: 2
   addedTangentSplit: 2
   impactConfinementFactor: 1
+  isImpact: 1
+  deformRadius: 0.2
+  maxDeform: 0.1
+  damageFalloff: 1
+  damageMultiplier: 1
+  minDamage: 1
 --- !u!65 &191077141
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -651,7 +655,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 191077139}
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -0.025, y: 1.088, z: -9.246}
+  m_LocalPosition: {x: -0.025, y: 1.088, z: -9.274}
   m_LocalScale: {x: 0.1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -3223,7 +3227,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 597236112}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.14308244, y: 0.9162709, z: -9.464343}
+  m_LocalPosition: {x: -0.14308244, y: 0.9162709, z: -9.525343}
   m_LocalScale: {x: 0.04, y: 0.04, z: 0.04}
   m_Children: []
   m_Father: {fileID: 0}
@@ -8807,7 +8811,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1188183631}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.989, y: -0.26, z: -0.806}
+  m_LocalPosition: {x: -0.989, y: -0.26, z: -0.86699986}
   m_LocalScale: {x: 0.1, y: 0.3, z: 0.1}
   m_Children: []
   m_Father: {fileID: 1679511168}
@@ -10344,7 +10348,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: pb_Mesh18232
+  m_Name: pb_Mesh18258
   serializedVersion: 10
   m_SubMeshes:
   - serializedVersion: 2
