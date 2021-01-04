@@ -24,6 +24,9 @@ public class KNN : MonoBehaviour
     public HandModel left;
     public HandModel right;
 
+    string classLeft;
+    string classRight;
+
     //La zone de texte à afficher
     public Text textLeft;
     public Text textRight;
@@ -62,6 +65,11 @@ public class KNN : MonoBehaviour
             float[] vals = Array.ConvertAll(line.Slice(0, line.Length - 1).ToArray(), float.Parse);
             data.Add(new Tuple<string, float[]>(classe, vals));
         }
+    }
+
+    public string getClassOfContactHand(string hand)
+    {
+        return hand.Equals("right") ? classRight : classLeft;
     }
 
     //Active le tracking
@@ -104,6 +112,7 @@ public class KNN : MonoBehaviour
             sun.intensity = Math.Max((float)0.4,Math.Min((float)1.5,hand.PalmPosition.y / rangeLeap));
         }
     }
+    
 
     public void testKNN()
     {
@@ -195,10 +204,12 @@ public class KNN : MonoBehaviour
                 //Change le texte
                 if (hand.IsLeft)
                 {
-                    textLeft.text = "Main Gauche : " +classe;
+                    classLeft = classe;
+                    textLeft.text = "Left Hand : " +classe;
                 }else if (hand.IsRight)
                 {
-                    textRight.text = "Main Droite : " + classe;
+                    classRight = classe;
+                    textRight.text = "Right Hand : " + classe;
                     adjustSunHeight(hand, classe);
                 }
             }

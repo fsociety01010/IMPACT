@@ -1,36 +1,27 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Leap.Unity;
 
 public class playSound : MonoBehaviour
 {
-    public AudioClip audio;
+    public AudioManager audioManager;
     private bool wait;
-    // Start is called before the first frame update
-    void Start()
-    {
-        wait = false;
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    private IEnumerator timer()
-    {
-        wait = true;
-        yield return new WaitForSeconds(0.8f);
-        wait = false;
-    }
+    public KNN knn;
+    public HandModel left;
+    public HandModel right;
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (!wait)
+        bool isLeft = (collision.transform.parent!=null)&&collision.transform.parent.name.ToLower().Contains("left");
+        bool isRight = (collision.transform.parent != null) && collision.transform.parent.name.ToLower().Contains("right");
+        if (isLeft || isRight)
         {
-            StartCoroutine(timer());
-            AudioSource.PlayClipAtPoint(audio, collision.GetContact(0).point);
+            audioManager.PlaySound(knn.getClassOfContactHand(isRight ? "right" : "left"));
+        }
+        else
+        {
+            audioManager.PlaySound("default");
         }
         
     }

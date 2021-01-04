@@ -330,6 +330,7 @@ public class Surface : MonoBehaviour
             Vector3 impactPoint = col.GetContact(0).point;
             // Debug.Log(col.rigidbody.velocity);
             StartCoroutine(this.Impact(impactPoint,col));
+            counter--;
         }
     }
 
