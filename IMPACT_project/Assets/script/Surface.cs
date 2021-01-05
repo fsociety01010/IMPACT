@@ -22,29 +22,22 @@ public class Surface : MonoBehaviour
     private float explosionUpward = 1f;    
     private float explosionForce = 1f;
 
-    [Range(0, 8)]
+    [Range(0, 20)]
     public int addedObliqueSplit = 2; // combien de split pour chaque split fait avec les 4 sommets de base de la face impactée
 
-    [Range(0, 8)]
+    [Range(0, 20)]
     public int addedTangentSplit = 2;
 
     [Range(0, 1)]
     public float impactConfinementFactor = 0.7f;
     public bool isBreaking = true;
 
-
-    //TODO à renomer
     [Range(0, 0.5f)]
     public float deformRadius = 0.2f;
-    [Range(0, 10)]
-    public float maxDeform = 0.1f;
     [Range(0, 1)]
-    public float damageFalloff = 1;
+    public float deformFalloff = 1;
     [Range(0, 10)]
-    public float damageMultiplier = 1;
-    [Range(0, 100000)]
-    public float minDamage = 1;
-
+    public float deformMultiplier = 1;
 
 
     void Start()
@@ -89,6 +82,7 @@ public class Surface : MonoBehaviour
     /// <summary>
     /// Permet d'obtenir un repère orthogonal et normal ayant pour origine le point "projectilePosition_".
     /// Le X de ce repère correspondant à la normale de surface du triangle sur lequel l'impact a été détecté.
+    /// L'intéret majeur étant de pouvoir ordonner les points existants et créer à l'impact.
     /// </summary>
     private Matrix4x4 getLocalImpactSpace(Mesh mesh_, Vector3 projectilePosition_){
         Matrix4x4 localToWorld = this.transform.localToWorldMatrix;
@@ -136,9 +130,18 @@ public class Surface : MonoBehaviour
             new Vector4(-origin.x, -origin.y, -origin.z, 1)
         );
     }
+
+    ///<summary>
+    /// Applique une force de répulsion au point donné sur le rigidbody fournu.
+    /// Les propriétés de cette force varie en fonction des propriétés explosive courantes de l'objet qui varie avec la force de l'impact
+    ///</summary>
     private void explode(Vector3 epicenter_, Rigidbody targetForExplosion_){
         targetForExplosion_.AddExplosionForce(explosionForce, epicenter_, explosionRadius, explosionUpward, ForceMode.Impulse);
     }
+
+    ///<summary>
+    /// Modifie les propriétés de l'objet qui influencent la manière dont ce dernier explose
+    ///</summary>
     private void calcForceExplosion(Collision colObject)
     {
         this.explosionUpward = colObject.impulse.z;
@@ -150,7 +153,7 @@ public class Surface : MonoBehaviour
 
     /// <summary>
     /// Renvoie le vecteur au côté opposé du point d'impact, renvoie dans l'ordre le point côté collision, le point côté opposé à la collision, et un booléen qui indique si les deux ont été inversé.
-    /// La raison pour laquelle ces deux vecteur peuvent être inversé est que l'il sont parfois géométriquement inversé avec l'angle de l'objet.
+    /// La raison pour laquelle ces deux vecteur peuvent être inversé est qu'il sont parfois géométriquement inversé avec l'angle de l'objet.
     /// ATTENTION, le cas ou un cube à une épaisseur nulle n'est pas supporté
     /// </summary>
     private (Vector3,Vector3,bool) getOppositeSideVertex(Vector3 localSpaceEpicenter_,Vector3 anyImpactSideVertex_, Vector3 anyOppositeSideVertex_){
@@ -169,7 +172,7 @@ public class Surface : MonoBehaviour
     }
 
     /// <summary>
-    /// Sert à convertire les coordonnées des vecteurs d'impacte contenu dans une 2D array en localSpace
+    /// Sert à convertire les coordonnées des vecteurs en localSpace
     /// </summary>
     private Vector3[,] convertSideToLocalSpace(Vector3[,] sideVertices_) {
         Vector3[,] result = new Vector3[sideVertices_.GetLength(0),sideVertices_.GetLength(1)];
@@ -182,7 +185,11 @@ public class Surface : MonoBehaviour
     }
 
     /// <summary>
-    /// Subdivise la mesh de base plusieurs nouvelles mesh, les mesh vont des vertex existant vers le vertex correspondant au point d'impacte (+ le même point mais du côté opposé de la surface)
+    /// Subdivise l'objet' de base en plusieurs nouveaux objets, chaque objet est créée en allant du point d'impact vers les extrémités de l'objets et autour du point d'impact (pareil du côté opposé)
+    /// Deux types d'objets sont créées (si le nombre de tangentSplit est supérieur à 0): des objets "triangulaire" au niveau du point d'impact, le reste sont des objets "rectangulaire".
+    /// La mesh des ces objets est créé à l'aide des vertex fourni par l'appeleur, leurs triangles sont créés à la main.
+    /// Les normales de leurs triangles sont par ailleurs calculée pour que ces objets restent compatible avec l'éclairage de la scène.
+    /// Une force d'explosion est ensuite appliquée sur chacun de ces objets.
     /// </summary>
     private void BreakSurface(Vector3 worldSpaceEpiCenter_, Vector3[,] impactSideVertices_, Vector3[,] oppositeSideVertices_, int currentMeshID_, MeshRenderer mr_, Collision colObject){
         Destroy(this.gameObject);
@@ -254,6 +261,9 @@ public class Surface : MonoBehaviour
         }
     }
 
+    ///<summary>
+    /// Renvoie un iterateur sur l'array 2D qui va d'abord dans le sens oblique puis dans le sens tangent
+    ///</summary>
     public IEnumerable<Vector3> Flatten(Vector3[,] arr2D) {
     for (int i = 0; i < arr2D.GetLength(0); i++) {
         for (int j = 0; j < arr2D.GetLength(1); j++) {
@@ -262,6 +272,11 @@ public class Surface : MonoBehaviour
         }
     }
 
+    ///<summary>
+    /// Modifie la mesh de l'objet courant. Cette mesh correspond à une déformation d'impact autour d'un epicentre.
+    /// La nouvelle mesh est constitués des points fourni par la fonction appelante et connecte ces derniers avec des triangles générés itérativement.
+    /// Les normales a ses triangles sont par ailleurs calculée pour que l'objet reste compatible avec l'éclairage de la scène.
+    ///</summary>
     private void DeformSurface(Vector3 worldSpaceEpiCenter_, Vector3[,] impactSideVertices_, Vector3[,] oppositeSideVertices_, int currentMeshID_, MeshFilter mf_){
         Vector3[,] impactSideVertices = impactSideVertices_.Clone() as Vector3[,];
         Vector3[,] oppositeSideVertices = oppositeSideVertices_.Clone() as Vector3[,];
@@ -270,21 +285,18 @@ public class Surface : MonoBehaviour
         (Vector3 localisedEpicenter, Vector3 oppositeSideEpicenter, bool areImpactPointsReversed) = this.getOppositeSideVertex(localCollision, impactSideVertices[0, this.addedTangentSplit], oppositeSideVertices[0, this.addedTangentSplit]);
 
         Vector3 impactDirection = this.transform.InverseTransformDirection(Vector3.Normalize(this.transform.TransformPoint(oppositeSideEpicenter) - this.transform.TransformPoint(localisedEpicenter)));
-        print("impSide: " + localisedEpicenter + " oppSide: " + oppositeSideEpicenter + "dir: "+ impactDirection);
 
         Vector3 getOffset(float distanceFromImpact_){
             if(distanceFromImpact_ < this.deformRadius){
-                float deformationFactor = 1 - (distanceFromImpact_/this.deformRadius) * this.damageFalloff;
+                float deformationFactor = 1 - (distanceFromImpact_/this.deformRadius) * this.deformFalloff;
                 Vector3 deformation;
                 if(areImpactPointsReversed) deformation = deformationFactor * oppositeSideEpicenter;
                 else deformation = deformationFactor * localisedEpicenter;
-                return Vector3.Scale(impactDirection, deformation) * this.damageMultiplier;
+                return Vector3.Scale(impactDirection, deformation) * this.deformMultiplier;
             }else{
                 return new Vector3(0,0,0);
             }
         }
-
-        print("are reversed: " + areImpactPointsReversed);
         
         for (int obliqueIndex = 0; obliqueIndex < impactSideVertices.GetLength(0); obliqueIndex ++){
             for (int tangentIndex = 0; tangentIndex < impactSideVertices.GetLength(1); tangentIndex++){
@@ -363,7 +375,8 @@ public class Surface : MonoBehaviour
     }
 
     /// <summary>
-    /// Génere l'ensemble des déformations liées au point d'impacte
+    /// Génere l'ensemble des points nécéssaire à la déformation (fracture ou élastique) de l'objet à l'aide du point de contacte de l'objet.
+    /// Les points d'impacte vont du points d'impact vers les extrémités de l'objet et leur disposition est arrondie afin de donné un aspect plus convainquant à cet effet.
     /// </summary>
     private IEnumerator Impact(Vector3 epiCenter_, Collision colObject){
         MeshFilter mf = GetComponent<MeshFilter>();
@@ -504,6 +517,9 @@ public class Surface : MonoBehaviour
         */
     }
 
+    /// <summary>
+    /// Fonction utilitaire qui permet d'observer un point dans l'espace
+    /// </summary>
     private void LeaveTrail(Vector3 point, float scale, Material material)
     {
         GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
