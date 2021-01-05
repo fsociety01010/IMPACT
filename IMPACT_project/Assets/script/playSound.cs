@@ -17,6 +17,7 @@ public class playSound : MonoBehaviour
         bool isRight = (collision.transform.parent != null) && collision.transform.parent.name.ToLower().Contains("right");
         if (isLeft || isRight)
         {
+            print(knn.getClassOfContactHand(isRight ? "right" : "left"));
             audioManager.PlaySound(knn.getClassOfContactHand(isRight ? "right" : "left"));
         }
         else
