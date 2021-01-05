@@ -5,39 +5,55 @@ using Leap;
 using Leap.Unity;
 using System.IO;
 using UnityEngine.UI;
-
+/// <summary>
+/// Allows us to record data
+/// </summary>
 public class RecordData : MonoBehaviour
 {
-    // Start is called before the first frame update
+    //The LeapMotion
     private Controller controller;
+    //Checks if we're recording
     private bool isRecording = false;
+    //The handmodels
     public HandModel left;
     public HandModel right;
+    //The field were we type the gesture we want to record
     public InputField input;
+    //The mode we're recording
     string mode = "closed";
+    //The file to record to
     public string path = "";
     void Start()
     {
         controller = new Controller();
     }
-
+    /// <summary>
+    /// Enables recording
+    /// </summary>
     public void enableRecording()
     {
         isRecording = true;
     }
 
+    /// <summary>
+    /// Disable recording
+    /// </summary>
     public void disableRecording()
     {
         isRecording = false;
     }
-
+    /// <summary>
+    /// Switches between recording and not recording
+    /// </summary>
     public void toggle()
     {
         mode = input.text;
         isRecording = !isRecording;
     }
 
-    // Update is called once per frame
+    /// <summary>
+    /// Records data
+    /// </summary>
     void Update()
     {
         Frame frame = controller.Frame();

@@ -8,41 +8,43 @@ using System.IO;
 using System;
 using System.Linq;
 
+/// <summary>
+/// Performs KNN
+/// </summary>
 public class KNN : MonoBehaviour
 {
 
-
+    //The amount of neighbours to compare the hand to.
     public int k = 3;
 
-    //Le LeapMotion utilisé
+    //The LeapMotion
     private Controller controller;
 
-    //Vérifie si on doit faire le KNN
+    //Checks if we need to perform the KNN
     private bool isTracking = true;
 
-    //Le modèle des mains
+    //The handmodels
     public HandModel left;
     public HandModel right;
 
+    //The class of both hands
     string classLeft;
     string classRight;
 
-    //La zone de texte à afficher
+    //The zones where to display the class
     public Text textLeft;
     public Text textRight;
 
-    //Le chemin vers le fichier de donnée
+    //The path to the data
     public string path;
 
-    //Le chemin vers le fichier de donnée de test
+    //The path to the test data
     public string pathTest;
 
+    //The lightsource of the scene
     public Light sun;
 
-    List<float> frameWindow=new List<float>();
-
-    public int sizeOfWindow = 20;
-
+    //The range of the LeapMotion
     float rangeLeap = 430;
 
     //Les données du fichier
@@ -52,9 +54,10 @@ public class KNN : MonoBehaviour
     {
         controller = new Controller();
         readDataFile();
-        //Lit le contenu du fichier
     }
-
+    /// <summary>
+    /// Loads the data used to perform the KNN
+    /// </summary>
     private void readDataFile()
     {
         StreamReader read = new StreamReader(path);
@@ -66,26 +69,32 @@ public class KNN : MonoBehaviour
             data.Add(new Tuple<string, float[]>(classe, vals));
         }
     }
-
+    /// <summary>
+    /// Gets the class of the hand touching the glass surface
+    /// </summary>
     public string getClassOfContactHand(string hand)
     {
         return hand.Equals("right") ? classRight : classLeft;
     }
 
-    //Active le tracking
+    /// <summary>
+    /// Enable tracking
+    /// </summary>
     public void enableTracking()
     {
         isTracking = true;
         readDataFile();
     }
-
-    //Désactive le tracking
+    /// <summary>
+    /// Disable tracking
+    /// </summary>
     public void disableTracking()
     {
         isTracking = false;
     }
-
-    //calcule la classe
+    /// <summary>
+    /// Computes a hand's class
+    /// </summary>
     string getClassOfHand(Tuple<string, float>[] kNearest)
     {
         List<string> label = new List<string>();
@@ -104,7 +113,9 @@ public class KNN : MonoBehaviour
         }
         return label[vals.IndexOf(vals.Max())];
     }
-    
+    /// <summary>
+    /// Adjusts the sun's height
+    /// </summary>
     public void adjustSunHeight(Hand hand,string classe)
     {
         if (classe == "sun")
@@ -112,8 +123,10 @@ public class KNN : MonoBehaviour
             sun.intensity = Math.Max((float)0.4,Math.Min((float)1.5,hand.PalmPosition.y / rangeLeap));
         }
     }
-    
 
+    /// <summary>
+    /// Tests the KNN's accuracy
+    /// </summary>
     public void testKNN()
     {
         StreamReader read = new StreamReader(pathTest);
@@ -159,8 +172,9 @@ public class KNN : MonoBehaviour
         }
         print(disp);
     }
-
-    // Update is called once per frame
+    /// <summary>
+    /// Performs the KNN every frame
+    /// </summary>
     void Update()
     {
         //Récupère les deux mains
