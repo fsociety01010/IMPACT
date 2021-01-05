@@ -18,9 +18,9 @@ public class Surface : MonoBehaviour
     private Material trailMaterial;
 
     // Maintenant, on prends les donnees dynamiques
-    float explosionRadius = 1f;
-    float explosionUpward = 1f;    
-    float explosionForce = 1f;
+    private float explosionRadius = 1f;
+    private float explosionUpward = 1f;    
+    private float explosionForce = 1f;
 
     [Range(0, 8)]
     public int addedObliqueSplit = 2; // combien de split pour chaque split fait avec les 4 sommets de base de la face impactée
@@ -142,10 +142,10 @@ public class Surface : MonoBehaviour
     }
     private void calcForceExplosion(Collision colObject)
     {
-        explosionUpward = colObject.impulse.z;
-        explosionForce = (float)(colObject.rigidbody.mass * (Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x)) * 0.3f);
+        this.explosionUpward = colObject.impulse.z;
+        this.explosionForce = (float)(colObject.rigidbody.mass * (Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x)) * 0.3f);
         Debug.Log("Explosion Force - " + explosionForce);
-        explosionRadius = (float)(colObject.rigidbody.mass * Math.Sqrt((Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x)) * 0.2f));
+        this.explosionRadius = (float)(colObject.rigidbody.mass * Math.Sqrt((Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x) + Math.Abs(colObject.rigidbody.velocity.x)) * 0.2f));
         Debug.Log("Explosion Radius - " + explosionRadius);
     }
 
@@ -375,9 +375,24 @@ public class Surface : MonoBehaviour
             Vector3 translatedVertex = localImpactSpace.MultiplyPoint3x4(vertex);
             return 180f * Mathf.Atan2(translatedVertex.z, translatedVertex.y) / Mathf.PI;
         }
+        
+        /// Renvoie un vecteur qui se trouve n*100 % de la distance entre start et stop
+        /// Si isSmoothed est true alors cette distance est attenuée de manière exponentielle inverse, c'est principalement utile pour arrondire le point d'impacte
+        Vector3 NOfTheWayBetween(Vector3 start, Vector3 stop, float n, bool isSmoothed){
 
-        Vector3 NOfTheWayBetween(Vector3 start, Vector3 stop, float n){
-            return n * stop + (1-n) * start;
+            /// Permet d'arrondir la disposition des vertex tangents à l'impact.
+            /// Quand x est dans [0,1], x^val fait une courbe progressivement décroissante pour val allant de 0 à 1 et qui tend vers 0.
+            /// L utilité etant que cela permet d attenuer la distance entre les nouveaux vertex et l'epicentre de manière non linéaraire, ce qui aura pour concéquence d'arrondire le contour de l'impacte
+            float smoother(float val){
+                return Mathf.Pow(0.5f, val); 
+            }
+
+            if(isSmoothed){
+                float smoothingFactor = smoother(Vector3.Magnitude((n * stop + (1-n) * start) - start)); //distance epicentre ==> point
+                return (n*smoothingFactor) * stop + (1-(n*smoothingFactor)) * start;
+            }
+            else return n * stop + (1-n) * start;
+            
         }
 
         //LeaveTrail(epiCenter_, 0.1f, this.trailMaterial);
@@ -424,15 +439,15 @@ public class Surface : MonoBehaviour
                         stopIndex = 0;
                     }
 
-                    impactSideVertices[i, this.addedTangentSplit] = NOfTheWayBetween(existingImpactSideVertices[startIndex], existingImpactSideVertices[stopIndex], nOfTheWay);
-                    oppositeSideVertices[i, this.addedTangentSplit] = NOfTheWayBetween(existingOppositeSideVertices[startIndex], existingOppositeSideVertices[stopIndex], nOfTheWay);
+                    impactSideVertices[i, this.addedTangentSplit] = NOfTheWayBetween(existingImpactSideVertices[startIndex], existingImpactSideVertices[stopIndex], nOfTheWay, false);
+                    oppositeSideVertices[i, this.addedTangentSplit] = NOfTheWayBetween(existingOppositeSideVertices[startIndex], existingOppositeSideVertices[stopIndex], nOfTheWay, false);
                 }
 
                 //pour i allant de 0 à addedTangentSplit+1, rajouter un split ...
                 for(int j=1; j<this.addedTangentSplit+1; j++){
                     float n = (this.impactConfinementFactor*j)/(this.addedTangentSplit+1.0f);
-                    impactSideVertices[i,j-1] = NOfTheWayBetween(localisedEpicenter, impactSideVertices[i, this.addedTangentSplit], n);
-                    oppositeSideVertices[i, j-1] =  NOfTheWayBetween(oppositeSideEpicenter, oppositeSideVertices[i, this.addedTangentSplit], n);
+                    impactSideVertices[i,j-1] = NOfTheWayBetween(localisedEpicenter, impactSideVertices[i, this.addedTangentSplit], n, true);
+                    oppositeSideVertices[i, j-1] =  NOfTheWayBetween(oppositeSideEpicenter, oppositeSideVertices[i, this.addedTangentSplit], n, true);
                 }
             }
 
