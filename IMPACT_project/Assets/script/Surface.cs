@@ -208,7 +208,7 @@ public class Surface : MonoBehaviour
                         };
                     }
                     
-                    newMesh.triangles = new int[] {0,1,2, 2,5,3, 3,0,2, 2,1,5, 5,1,4, 4,1,0, 0,3,4, 4,3,5};
+                    newMesh.triangles = new int[] {2,1,0, 3,5,2, 2,0,3, 5,1,2, 4,1,5, 0,1,4, 4,3,0, 5,3,4};
                 }else{
                     if(obliqueIndex+1 < impactSideVertices.GetLength(0)){
                         newMesh.vertices = new Vector3[] {
@@ -223,12 +223,12 @@ public class Surface : MonoBehaviour
                     }
                     
                     newMesh.triangles = new int[] { 
-                        0,1,2, 2,3,0,   //top
-                        0,3,7, 7,4,0,   //left
-                        0,4,1, 1,4,5,   //back
-                        5,4,7, 7,6,5,   //bottom
-                        5,6,1, 1,6,2,   //right
-                        2,6,7, 7,3,2    //front
+                        2,1,0, 0,3,2,   //top
+                        7,3,0, 0,4,7,   //left
+                        1,4,0, 5,4,1,   //back
+                        7,4,5, 5,6,7,   //bottom
+                        1,6,5, 2,6,1,   //right
+                        7,6,2, 2,3,7    //front
                     };
                 }
                 
