@@ -65,12 +65,18 @@ public class AudioManager : MonoBehaviour
 
     public void PlaySound(string _name)
     {
+        Sound defaut=sound[0];
         for (int i = 0; i < sound.Length; i++)
         {
             if(sound[i].clipName == _name){
                 sound[i].Play();
                 return;
             }
+            if (sound[i].clipName == "defaut")
+            {
+                defaut = sound[i];
+            }
         }
+        defaut.Play();
     }
     }
