@@ -3,14 +3,20 @@ using System.Collections.Generic;
 using UnityEngine;
 using Leap.Unity;
 
+/// <summary>
+/// Plays a sound
+/// </summary>
 public class playSound : MonoBehaviour
 {
+    //The audio manager to use
     public AudioManager audioManager;
-    private bool wait;
+    //The ibject performing the KNN
     public KNN knn;
+    //The hand models
     public HandModel left;
     public HandModel right;
 
+    //Plays a sound when something touches the surface
     private void OnCollisionEnter(Collision collision)
     {
         bool isLeft = (collision.transform.parent!=null)&&collision.transform.parent.name.ToLower().Contains("left");
