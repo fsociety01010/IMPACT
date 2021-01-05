@@ -154,15 +154,19 @@ public class Surface : MonoBehaviour
     /// Les deux premiers vecteur sont idéalement parallèle.
     /// ATTENTION, le cas ou un cube à une épaisseur nulle n'est pas supporté
     /// </summary>
-    private Vector3 getOppositeSideVertex(Vector3 localSpaceEpicenter_,Vector3 anyImpactSideVertex_, Vector3 anyOppositeSideVertex_){
+    private (Vector3,Vector3) getOppositeSideVertex(Vector3 localSpaceEpicenter_,Vector3 anyImpactSideVertex_, Vector3 anyOppositeSideVertex_){
         Vector3 impactDirectionThickness = anyOppositeSideVertex_ - anyImpactSideVertex_;
 
-        if(Mathf.Abs(impactDirectionThickness.x) > 0){
-            return new Vector3(anyOppositeSideVertex_.x, localSpaceEpicenter_.y, localSpaceEpicenter_.z);
-        }else if(Mathf.Abs(impactDirectionThickness.y) > 0){
-            return new Vector3(localSpaceEpicenter_.x, anyOppositeSideVertex_.y, localSpaceEpicenter_.z);
+        if(impactDirectionThickness.x > 0){
+            if(localSpaceEpicenter_.x < 0) return (localSpaceEpicenter_, localSpaceEpicenter_ + impactDirectionThickness);
+            else return (localSpaceEpicenter_ - impactDirectionThickness, localSpaceEpicenter_);
+        }else if(impactDirectionThickness.y > 0){
+            if(localSpaceEpicenter_.y < 0) return (localSpaceEpicenter_, localSpaceEpicenter_ + impactDirectionThickness);
+            else return (localSpaceEpicenter_ - impactDirectionThickness, localSpaceEpicenter_);
         }else{
-            return new Vector3(localSpaceEpicenter_.x, localSpaceEpicenter_.y, anyOppositeSideVertex_.z);
+            if (impactDirectionThickness.z <= 0) print("ALERTE, incohérence de calcule trouvée dans getOppositeSideVertex");
+            if(localSpaceEpicenter_.y < 0) return (localSpaceEpicenter_, localSpaceEpicenter_ + impactDirectionThickness);
+            else return (localSpaceEpicenter_ - impactDirectionThickness, localSpaceEpicenter_);
         }
     }
 
@@ -188,8 +192,8 @@ public class Surface : MonoBehaviour
         Vector3[,] impactSideVertices = convertSideToLocalSpace(impactSideVertices_);
         Vector3[,] oppositeSideVertices =  convertSideToLocalSpace(oppositeSideVertices_);
         
-        Vector3 localisedEpicenter = Vector3.Scale(this.transform.worldToLocalMatrix.MultiplyPoint3x4(worldSpaceEpiCenter_),  this.transform.localScale);
-        Vector3 oppositeSideEpicenter = this.getOppositeSideVertex(localisedEpicenter, impactSideVertices[0, this.addedTangentSplit], oppositeSideVertices[0, this.addedTangentSplit]);
+        Vector3 localCollision = Vector3.Scale(this.transform.worldToLocalMatrix.MultiplyPoint3x4(worldSpaceEpiCenter_),  this.transform.localScale);
+        (Vector3 localisedEpicenter, Vector3 oppositeSideEpicenter) = this.getOppositeSideVertex(localCollision, impactSideVertices[0, this.addedTangentSplit], oppositeSideVertices[0, this.addedTangentSplit]);
 
         for (int obliqueIndex = 0; obliqueIndex < impactSideVertices.GetLength(0); obliqueIndex ++){
             for (int tangentIndex = 0; tangentIndex < impactSideVertices.GetLength(1); tangentIndex++){
@@ -264,19 +268,20 @@ public class Surface : MonoBehaviour
         Vector3[,] impactSideVertices = impactSideVertices_.Clone() as Vector3[,];
         Vector3[,] oppositeSideVertices = oppositeSideVertices_.Clone() as Vector3[,];
 
-        Vector3 localisedEpicenter = this.transform.worldToLocalMatrix.MultiplyPoint3x4(worldSpaceEpiCenter_);
-        Vector3 oppositeSideEpicenter = this.getOppositeSideVertex(localisedEpicenter, impactSideVertices[0, this.addedTangentSplit], oppositeSideVertices[0, this.addedTangentSplit]);
+        Vector3 localCollision = this.transform.worldToLocalMatrix.MultiplyPoint3x4(worldSpaceEpiCenter_);
+        (Vector3 localisedEpicenter, Vector3 oppositeSideEpicenter) = this.getOppositeSideVertex(localCollision, impactSideVertices[0, this.addedTangentSplit], oppositeSideVertices[0, this.addedTangentSplit]);
 
-        Vector3 impactDirection = Vector3.Normalize(oppositeSideVertices[0,0] - impactSideVertices[0,0]);
+        Vector3 impactDirection = this.transform.InverseTransformDirection(Vector3.Normalize(this.transform.TransformPoint(oppositeSideEpicenter) - this.transform.TransformPoint(localisedEpicenter)));
+        print("impSide: " + localisedEpicenter + " oppSide: " + oppositeSideEpicenter + "dir: "+ impactDirection);
 
         Vector3 getOffset(float distanceFromImpact_){
-                if(distanceFromImpact_ < this.deformRadius){
-                    float deformationFactor = 1 - (distanceFromImpact_/this.deformRadius) * this.damageFalloff;
-                    Vector3 deformation = deformationFactor * localisedEpicenter;
-                    return Vector3.Scale(impactDirection, deformation) * this.damageMultiplier;
-                }else{
-                    return new Vector3(0,0,0);
-                }
+            if(distanceFromImpact_ < this.deformRadius){
+                float deformationFactor = 1 - (distanceFromImpact_/this.deformRadius) * this.damageFalloff;
+                Vector3 deformation = deformationFactor * localisedEpicenter;
+                return Vector3.Scale(impactDirection, deformation) * this.damageMultiplier;
+            }else{
+                return new Vector3(0,0,0);
+            }
         }
         
         for (int obliqueIndex = 0; obliqueIndex < impactSideVertices.GetLength(0); obliqueIndex ++){
@@ -367,10 +372,6 @@ public class Surface : MonoBehaviour
         Matrix4x4 localToWorld = this.transform.localToWorldMatrix;
         Matrix4x4 localImpactSpace = this.getLocalImpactSpace(baseMesh, worldToLocal.MultiplyPoint3x4(epiCenter_));
 
-        Vector3 localisedEpicenter = this.transform.worldToLocalMatrix.MultiplyPoint3x4(epiCenter_);
-
-        Vector3 oppositeSideEpicenter;
-
         float getAngleFromEpiCenter(Vector3 vertex){
             Vector3 translatedVertex = localImpactSpace.MultiplyPoint3x4(vertex);
             return 180f * Mathf.Atan2(translatedVertex.z, translatedVertex.y) / Mathf.PI;
@@ -415,7 +416,8 @@ public class Surface : MonoBehaviour
                 .Where((_,i) => i%3==0)
                 .ToArray(); //pas scale et pas en world coordinates attention
 
-            oppositeSideEpicenter = this.getOppositeSideVertex(localisedEpicenter, existingImpactSideVertices[0], existingOppositeSideVertices[0]);
+            Vector3 localCollision = worldToLocal.MultiplyPoint3x4(epiCenter_);
+            (Vector3 localisedEpicenter, Vector3 oppositeSideEpicenter) = this.getOppositeSideVertex(localCollision, existingImpactSideVertices[0], existingOppositeSideVertices[0]);
 
             int totalAmountOfObliqueSplits = (existingImpactSideVertices.Length) + this.addedObliqueSplit*(existingImpactSideVertices.Length);
 
@@ -450,6 +452,10 @@ public class Surface : MonoBehaviour
                     oppositeSideVertices[i, j-1] =  NOfTheWayBetween(oppositeSideEpicenter, oppositeSideVertices[i, this.addedTangentSplit], n, true);
                 }
             }
+
+            foreach (var item in impactSideVertices) this.LeaveTrail(localToWorld.MultiplyPoint3x4(item), 0.3f, this.trailMaterial);
+            foreach (var item in oppositeSideVertices) this.LeaveTrail(localToWorld.MultiplyPoint3x4(item), 0.3f, this.trailMaterial);
+            this.LeaveTrail(localToWorld.MultiplyPoint3x4(oppositeSideEpicenter), 0.8f, this.trailMaterial);
 
             if(this.isImpact) this.BreakSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mr, colObject);
             else this.DeformSurface(epiCenter_, impactSideVertices, oppositeSideVertices, meshID, mf);
