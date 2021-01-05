@@ -14,8 +14,10 @@ ScriptsOnlyBuild:
     Assembly-CSharp.dll:
     - AudioManager
     - KNN
+    - Projectile
     - RecordData
     - Surface
+    - changeScene
     - playSound
     - respawnCube
     - restartScene
@@ -82,6 +84,164 @@ ScriptsOnlyBuild:
     - UnityEngine.UI.Toggle
     - UnityEngine.UI.VerticalLayoutGroup
   sceneClasses:
+    Assets/Scenes/IMPACT.unity:
+    - Class: 1
+      Script: {instanceID: 0}
+    - Class: 4
+      Script: {instanceID: 0}
+    - Class: 20
+      Script: {instanceID: 0}
+    - Class: 21
+      Script: {instanceID: 0}
+    - Class: 28
+      Script: {instanceID: 0}
+    - Class: 48
+      Script: {instanceID: 0}
+    - Class: 81
+      Script: {instanceID: 0}
+    - Class: 104
+      Script: {instanceID: 0}
+    - Class: 108
+      Script: {instanceID: 0}
+    - Class: 114
+      Script: {instanceID: 11420}
+    - Class: 114
+      Script: {instanceID: 11422}
+    - Class: 114
+      Script: {instanceID: 11424}
+    - Class: 114
+      Script: {instanceID: 11426}
+    - Class: 114
+      Script: {instanceID: 11428}
+    - Class: 114
+      Script: {instanceID: 11430}
+    - Class: 114
+      Script: {instanceID: 11432}
+    - Class: 114
+      Script: {instanceID: 11630}
+    - Class: 114
+      Script: {instanceID: 11790}
+    - Class: 114
+      Script: {instanceID: 11822}
+    - Class: 114
+      Script: {instanceID: 12046}
+    - Class: 114
+      Script: {instanceID: 12108}
+    - Class: 114
+      Script: {instanceID: 12368}
+    - Class: 114
+      Script: {instanceID: 12856}
+    - Class: 114
+      Script: {instanceID: 12944}
+    - Class: 114
+      Script: {instanceID: 13110}
+    - Class: 114
+      Script: {instanceID: 13270}
+    - Class: 114
+      Script: {instanceID: 13566}
+    - Class: 114
+      Script: {instanceID: 13628}
+    - Class: 114
+      Script: {instanceID: 13712}
+    - Class: 114
+      Script: {instanceID: 13874}
+    - Class: 114
+      Script: {instanceID: 14248}
+    - Class: 114
+      Script: {instanceID: 14286}
+    - Class: 114
+      Script: {instanceID: 14704}
+    - Class: 114
+      Script: {instanceID: 14812}
+    - Class: 114
+      Script: {instanceID: 14836}
+    - Class: 114
+      Script: {instanceID: 15016}
+    - Class: 114
+      Script: {instanceID: 15058}
+    - Class: 114
+      Script: {instanceID: 15068}
+    - Class: 114
+      Script: {instanceID: 15488}
+    - Class: 114
+      Script: {instanceID: 15580}
+    - Class: 114
+      Script: {instanceID: 15918}
+    - Class: 114
+      Script: {instanceID: 16172}
+    - Class: 114
+      Script: {instanceID: 16236}
+    - Class: 114
+      Script: {instanceID: 16514}
+    - Class: 114
+      Script: {instanceID: 16522}
+    - Class: 114
+      Script: {instanceID: 16554}
+    - Class: 114
+      Script: {instanceID: 16592}
+    - Class: 114
+      Script: {instanceID: 16740}
+    - Class: 114
+      Script: {instanceID: 16746}
+    - Class: 114
+      Script: {instanceID: 22076}
+    - Class: 115
+      Script: {instanceID: 0}
+    - Class: 128
+      Script: {instanceID: 0}
+    - Class: 157
+      Script: {instanceID: 0}
+    - Class: 196
+      Script: {instanceID: 0}
+    - Class: 213
+      Script: {instanceID: 0}
+    - Class: 222
+      Script: {instanceID: 0}
+    - Class: 223
+      Script: {instanceID: 0}
+    - Class: 224
+      Script: {instanceID: 0}
+    Assets/Scenes/impactTestScene.unity:
+    - Class: 1
+      Script: {instanceID: 0}
+    - Class: 4
+      Script: {instanceID: 0}
+    - Class: 20
+      Script: {instanceID: 0}
+    - Class: 21
+      Script: {instanceID: 0}
+    - Class: 23
+      Script: {instanceID: 0}
+    - Class: 28
+      Script: {instanceID: 0}
+    - Class: 33
+      Script: {instanceID: 0}
+    - Class: 43
+      Script: {instanceID: 0}
+    - Class: 48
+      Script: {instanceID: 0}
+    - Class: 54
+      Script: {instanceID: 0}
+    - Class: 65
+      Script: {instanceID: 0}
+    - Class: 81
+      Script: {instanceID: 0}
+    - Class: 104
+      Script: {instanceID: 0}
+    - Class: 108
+      Script: {instanceID: 0}
+    - Class: 114
+      Script: {instanceID: 14524}
+    - Class: 114
+      Script: {instanceID: 14766}
+    - Class: 115
+      Script: {instanceID: 0}
+    - Class: 135
+      Script: {instanceID: 0}
+    - Class: 157
+      Script: {instanceID: 0}
+    - Class: 196
+      Script: {instanceID: 0}
     Assets/Scenes/leapScene.unity:
     - Class: 1
       Script: {instanceID: 0}
@@ -114,121 +274,55 @@ ScriptsOnlyBuild:
     - Class: 108
       Script: {instanceID: 0}
     - Class: 114
-      Script: {instanceID: 11418}
-    - Class: 114
-      Script: {instanceID: 11420}
-    - Class: 114
-      Script: {instanceID: 11422}
-    - Class: 114
       Script: {instanceID: 11424}
     - Class: 114
       Script: {instanceID: 11426}
     - Class: 114
-      Script: {instanceID: 11428}
+      Script: {instanceID: 11432}
     - Class: 114
-      Script: {instanceID: 11430}
+      Script: {instanceID: 11514}
     - Class: 114
-      Script: {instanceID: 11512}
+      Script: {instanceID: 11622}
     - Class: 114
-      Script: {instanceID: 11620}
+      Script: {instanceID: 11658}
     - Class: 114
-      Script: {instanceID: 11628}
+      Script: {instanceID: 11684}
     - Class: 114
-      Script: {instanceID: 11656}
+      Script: {instanceID: 12046}
     - Class: 114
-      Script: {instanceID: 11682}
+      Script: {instanceID: 12160}
     - Class: 114
-      Script: {instanceID: 11788}
+      Script: {instanceID: 12306}
     - Class: 114
-      Script: {instanceID: 11820}
+      Script: {instanceID: 12826}
     - Class: 114
-      Script: {instanceID: 12044}
+      Script: {instanceID: 12980}
     - Class: 114
-      Script: {instanceID: 12106}
+      Script: {instanceID: 13110}
     - Class: 114
-      Script: {instanceID: 12158}
+      Script: {instanceID: 13766}
     - Class: 114
-      Script: {instanceID: 12304}
+      Script: {instanceID: 13824}
     - Class: 114
-      Script: {instanceID: 12366}
+      Script: {instanceID: 14164}
     - Class: 114
-      Script: {instanceID: 12824}
+      Script: {instanceID: 14222}
     - Class: 114
-      Script: {instanceID: 12854}
+      Script: {instanceID: 14248}
     - Class: 114
-      Script: {instanceID: 12942}
+      Script: {instanceID: 14510}
     - Class: 114
-      Script: {instanceID: 12978}
+      Script: {instanceID: 14524}
     - Class: 114
-      Script: {instanceID: 13108}
+      Script: {instanceID: 14734}
     - Class: 114
-      Script: {instanceID: 13268}
+      Script: {instanceID: 15042}
     - Class: 114
-      Script: {instanceID: 13564}
+      Script: {instanceID: 15826}
     - Class: 114
-      Script: {instanceID: 13626}
+      Script: {instanceID: 15914}
     - Class: 114
-      Script: {instanceID: 13710}
-    - Class: 114
-      Script: {instanceID: 13764}
-    - Class: 114
-      Script: {instanceID: 13822}
-    - Class: 114
-      Script: {instanceID: 13872}
-    - Class: 114
-      Script: {instanceID: 14162}
-    - Class: 114
-      Script: {instanceID: 14220}
-    - Class: 114
-      Script: {instanceID: 14246}
-    - Class: 114
-      Script: {instanceID: 14284}
-    - Class: 114
-      Script: {instanceID: 14508}
-    - Class: 114
-      Script: {instanceID: 14522}
-    - Class: 114
-      Script: {instanceID: 14702}
-    - Class: 114
-      Script: {instanceID: 14732}
-    - Class: 114
-      Script: {instanceID: 14810}
-    - Class: 114
-      Script: {instanceID: 14834}
-    - Class: 114
-      Script: {instanceID: 15014}
-    - Class: 114
-      Script: {instanceID: 15040}
-    - Class: 114
-      Script: {instanceID: 15056}
-    - Class: 114
-      Script: {instanceID: 15066}
-    - Class: 114
-      Script: {instanceID: 15486}
-    - Class: 114
-      Script: {instanceID: 15578}
-    - Class: 114
-      Script: {instanceID: 15824}
-    - Class: 114
-      Script: {instanceID: 15912}
-    - Class: 114
-      Script: {instanceID: 15916}
-    - Class: 114
-      Script: {instanceID: 16170}
-    - Class: 114
-      Script: {instanceID: 16234}
-    - Class: 114
-      Script: {instanceID: 16512}
-    - Class: 114
-      Script: {instanceID: 16520}
-    - Class: 114
-      Script: {instanceID: 16552}
-    - Class: 114
-      Script: {instanceID: 16590}
-    - Class: 114
-      Script: {instanceID: 16738}
-    - Class: 114
-      Script: {instanceID: 16744}
+      Script: {instanceID: 16554}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 128
@@ -1802,8 +1896,16 @@ ScriptsOnlyBuild:
     assemblyName: Unity.Timeline.dll
     namespaceName: UnityEngine.Timeline
     className: PlayableTrack
+  - hash:
+      serializedVersion: 2
+      Hash: 71bb6a6b6c8f052f948db64c7dd3ca4f
+    assemblyName: Assembly-CSharp.dll
+    namespaceName: 
+    className: changeScene
   platform: 5
   scenePathNames:
+  - Assets/Scenes/IMPACT.unity
+  - Assets/Scenes/impactTestScene.unity
   - Assets/Scenes/leapScene.unity
   playerPath: C:/Users/roman/Desktop/travail/mouvement et ia/IMPACT/IMPACT_project/TestHMM
     and collision.exe
