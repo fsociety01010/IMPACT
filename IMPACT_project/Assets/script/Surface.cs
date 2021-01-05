@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -252,33 +252,39 @@ public class Surface : MonoBehaviour
         }
     }
 
-    /// src: https://stackoverflow.com/questions/3150678/using-linq-with-2d-array-select-not-found
-    public IEnumerable<T> Flatten<T>(T[,] map) {
-    for (int row = 0; row < map.GetLength(0); row++) {
-        for (int col = 0; col < map.GetLength(1); col++) {
-            yield return map[row,col];
+    public IEnumerable<Vector3> Flatten(Vector3[,] arr2D) {
+    for (int i = 0; i < arr2D.GetLength(0); i++) {
+        for (int j = 0; j < arr2D.GetLength(1); j++) {
+            yield return arr2D[i,j];
             }
         }
     }
+
     private void DeformSurface(Vector3 worldSpaceEpiCenter_, Vector3[,] impactSideVertices_, Vector3[,] oppositeSideVertices_, int currentMeshID_, MeshFilter mf_){
-        Vector3[,] impactSideVertices = impactSideVertices_;
-        Vector3[,] oppositeSideVertices = oppositeSideVertices_;
+        Vector3[,] impactSideVertices = impactSideVertices_.Clone() as Vector3[,];
+        Vector3[,] oppositeSideVertices = oppositeSideVertices_.Clone() as Vector3[,];
+
         Vector3 localisedEpicenter = this.transform.worldToLocalMatrix.MultiplyPoint3x4(worldSpaceEpiCenter_);
+        Vector3 oppositeSideEpicenter = this.getOppositeSideVertex(localisedEpicenter, impactSideVertices[0, this.addedTangentSplit], oppositeSideVertices[0, this.addedTangentSplit]);
 
         Vector3 impactDirection = Vector3.Normalize(oppositeSideVertices[0,0] - impactSideVertices[0,0]);
 
+        Vector3 getOffset(float distanceFromImpact_){
+                if(distanceFromImpact_ < this.deformRadius){
+                    float deformationFactor = 1 - (distanceFromImpact_/this.deformRadius) * this.damageFalloff;
+                    Vector3 deformation = deformationFactor * localisedEpicenter;
+                    return Vector3.Scale(impactDirection, deformation) * this.damageMultiplier;
+                }else{
+                    return new Vector3(0,0,0);
+                }
+        }
+        
         for (int obliqueIndex = 0; obliqueIndex < impactSideVertices.GetLength(0); obliqueIndex ++){
             for (int tangentIndex = 0; tangentIndex < impactSideVertices.GetLength(1); tangentIndex++){
                 float distanceFromImpact = Vector3.Distance(impactSideVertices[obliqueIndex, tangentIndex], localisedEpicenter);
-                if(distanceFromImpact < this.deformRadius){
-                    
-                    float deformationFactor = 1 - (distanceFromImpact/this.deformRadius) * this.damageFalloff;
 
-                    Vector3 deformation = deformationFactor * localisedEpicenter;
-
-                    impactSideVertices[obliqueIndex, tangentIndex] -= Vector3.Scale(impactDirection, deformation) * this.damageMultiplier;
-                    oppositeSideVertices[obliqueIndex, tangentIndex] -= Vector3.Scale(impactDirection, deformation) * this.damageMultiplier;
-                }
+                impactSideVertices[obliqueIndex, tangentIndex] -= getOffset(distanceFromImpact);
+                oppositeSideVertices[obliqueIndex, tangentIndex] -= getOffset(distanceFromImpact);
             }
         }
 
@@ -302,9 +308,10 @@ public class Surface : MonoBehaviour
                         if(tangentIndex == 0 && obliqueIndex % (o/2) == 0) foreach (var item in new int[]{t*(o/2),t*(o/4),0}) yield return (index+item) % (t*o);
                         else foreach (var item in new int[]{0,-1,t-1,t-1,t,0}) yield return (index+item) % (t*o);
                     }else if(tangentIndex == 0){
-                        //Intérieur face avant à trois coté
-                        if(obliqueIndex % (o/2) == 0) foreach (var item in new int[]{t*(o/2),t*(o/4),0}) yield return (index+item) % (t*o);
-                        else continue;
+                        //Intérieur face avant à trois coté, autour de l'épicentre avant
+                        yield return (t*o*2);
+                        yield return ((index+t) % (t*o));
+                        yield return index;
                     }else{
                         //milieu face avant à 4 côtés
                         foreach (var item in new int[]{0,-1,t-1,t-1,t,0}) yield return (index+item) % (t*o);
@@ -322,9 +329,10 @@ public class Surface : MonoBehaviour
                 for (int tangentIndex = 0; tangentIndex < t; tangentIndex++){
                     int index = (t*o) + (obliqueIndex*t) + tangentIndex;
                     if(tangentIndex == 0){
-                        //Intérieur face avant à trois coté
-                        if(obliqueIndex % (o/2) == 0) foreach (var item in new int[]{0,t*(o/4),t*(o/2)}) yield return ((index+item) % (t*o)) + (t*o); 
-                        else continue;
+                        //Intérieur face avant à trois coté, autour de l'épicentre arrière
+                        yield return index;
+                        yield return ((index+t) % (t*o)) + (t*o);
+                        yield return (t*o*2)+1;
                     }else{
                         //milieu face avant à 4 côtés
                         foreach (var item in new int[]{0,t,t-1,t-1,-1,0}) yield return ((index+item) % (t*o)) + (t*o);
@@ -334,7 +342,14 @@ public class Surface : MonoBehaviour
         }
 
         Mesh newMesh = new Mesh();
-        newMesh.vertices = this.Flatten(impactSideVertices).Concat(this.Flatten(oppositeSideVertices)).ToArray();
+
+        //localisedEpicenter et oppositeSideEpicenter sont ajouté dans le newMesh.vertices mais pas dans impactSideVertices et oppositeSideVertices pour simplifier la logique des index
+        newMesh.vertices = this.Flatten(impactSideVertices)
+            .Concat(this.Flatten(oppositeSideVertices))
+            .Append(localisedEpicenter - getOffset(0))
+            .Append(oppositeSideEpicenter - getOffset(0))
+            .ToArray();
+
         newMesh.triangles = getFrontTopRightBottomLeft().Concat(getBack()).ToArray();
         newMesh.RecalculateNormals();
         mf_.mesh = newMesh;
