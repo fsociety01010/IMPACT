@@ -4,7 +4,16 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/IMPACT.unity
+    guid: 15e49d704dbf936469005a1bdaa5c4d5
+  - enabled: 1
+    path: Assets/Scenes/impactTestScene.unity
+    guid: 7e9a9cd67c831ad46852e931014ae789
+  - enabled: 1
+    path: Assets/Scenes/leapScene.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
   m_configObjects:
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: a1b41ec8025bc79408f08005194c3fc9,
       type: 2}
